@@ -1,19 +1,18 @@
 import logging
-import time
+from typing import List, TypeVar, Dict, Any
 
 import graph
+
+
+Int_or_Float = TypeVar('Int_or_Float', int, float)
 
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 
 class Path(list):
-    """
-    :type nodes: list
-    :type starting_length: int or float
-    """
 
-    def __init__(self, nodes, starting_length=0):
+    def __init__(self, nodes: List[graph.Node], starting_length: Int_or_Float = 0):
         super(Path, self).__init__(nodes)
         self.length = starting_length
         self.enabled = True
@@ -43,18 +42,10 @@ class Path(list):
         new_length = self.length + rhs.length
         return Path(list.__add__(self, rhs), new_length)
 
-    def __getitem__(self, item):
-        """
-        :type item: int
-        :rtype: graph.Node or list
-        """
+    def __getitem__(self, item: int) -> graph.Node or List[graph.Node]:
         return list.__getitem__(self, item)
 
-    def appendNode(self, node, added_length):
-        """
-        :type node: graph.Node
-        :type added_length: int or float
-        """
+    def appendNode(self, node: graph.Node, added_length: int or float):
         self.length += added_length
         super(Path, self).append(node)
 
@@ -76,11 +67,8 @@ class Path(list):
         return len(self)
 
 
-def aStar(work_graph):
-    """Searches for the shortest path from start to goal.
-
-    :type work_graph: graph.Graph
-    """
+def aStar(work_graph: graph.Graph):
+    """Searches for the shortest path from start to goal."""
     # Set current level to infinity and other counters
     # TODO: add more data to track
     active_paths = {}
@@ -118,12 +106,8 @@ def aStar(work_graph):
     return data_dict
 
 
-def _pathIterate(source_node, data_dict):
-    """Searches through nodes and creates paths.
-
-    :type source_node: graph.Node
-    :type data_dict: dict
-    """
+def _pathIterate(source_node: graph.Node, data_dict: Dict[str, Any]):
+    """Searches through nodes and creates paths."""
     # 1) Frequently accessed data
     source_path_id = data_dict['source_path_id']
     work_graph = data_dict['work_graph']
@@ -205,13 +189,8 @@ def _pathIterate(source_node, data_dict):
     return next_node_to_expand
 
 
-def goalNodeUpdate(new_path, data_dict):
-    """Update the best goal path and disable all active paths that are longer than the new best goal path.
-
-    :type new_path: Path
-    :type data_dict: dict
-    :rtype: Path
-    """
+def goalNodeUpdate(new_path: Path, data_dict: Dict[str, Any]) -> Path:
+    """Update the best goal path and disable all active paths that are longer than the new best goal path."""
     logging.info("        AND IT IS THE GOAL!")
     active_paths = data_dict['active_paths']
     # Update the best goal path
@@ -231,16 +210,9 @@ def goalNodeUpdate(new_path, data_dict):
     return new_path
 
 
-def sameNodeCompare(best_length, new_path, path_id, active_paths, linked_node):
-    """Compare the path with the same ending node to the current shortest path to that node and pick the shorter.
-
-    :type best_length: int or float
-    :type new_path: Path
-    :type path_id: int
-    :type active_paths: dict
-    :type linked_node: graph.Node
-    :rtype: int or float
-    """
+def sameNodeCompare(best_length: Int_or_Float, new_path: Path, path_id: int, active_paths: Dict[int, Path],
+                    linked_node: graph.Node) -> Int_or_Float:
+    """Compare the path with the same ending node to the current shortest path to that node and pick the shorter."""
     path_length = active_paths[path_id].length
     if path_length > best_length:
         logging.info("        {} has been disabled because this path gets to "
@@ -254,7 +226,8 @@ def sameNodeCompare(best_length, new_path, path_id, active_paths, linked_node):
     return best_length
 
 
-def getPathsWeights(path, active_paths):
+'''
+def getPathsWeights(path: Path, active_paths: Dict[Path, Path]) -> Int_or_Float:
     """
     :type path: Path
     :type active_paths: dict
@@ -263,6 +236,7 @@ def getPathsWeights(path, active_paths):
     if not active_paths[path].enabled:
         return float('inf')
     return active_paths[path].weight
+'''
 
 
 if __name__ == '__main__':

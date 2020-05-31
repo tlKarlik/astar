@@ -1,11 +1,7 @@
 import tkinter as tk
 import logging as log
-import time
-
-from PIL import Image, ImageTk
 
 import graph
-import main
 
 
 # Logging config
@@ -14,9 +10,10 @@ log.basicConfig(level=log.INFO)
 
 
 class MainApp(tk.Frame):
+    node_min_size = 70
     canvas_pad = 5
 
-    def __init__(self, master):
+    def __init__(self, master: tk.Tk):
         tk.Frame.__init__(self, master)
         self.master = master
         self.master.title("A* Algorithm | Tomas Karlik")
@@ -34,29 +31,16 @@ class MainApp(tk.Frame):
 
         self.bindings()
 
-        # self.menubar = None
-        # self.genMenu()
-        # self.master.config(menu=self.menubar)
-
         # add an area where an image will appear
-        self.main_frame = tk.Frame(self, height=450, width=330)
-        self.main_frame.grid(row=0, column=0, pady=5, padx=5)
-        self.image_labels = []
-        # image_blank_source = Image.open('images/blank.png').convert('RGBA')
-        self.blank = ImageTk.PhotoImage(Image.open('images/blank.png').convert('RGBA'))
-        self.images = []
-        # for x in range(3):
-        #     for y in range(3):
-        #         new_img = tk.Label(self.main_frame, height=100, width=100, image=self.blank, bg='#FFF',
-        #                            highlightbackground='grey')
-        #         new_img.grid(row=x, column=y, pady=5, padx=5)
-        #         self.image_labels.append(new_img)
-
+        self.main_frame = tk.Frame(self, height=650, width=700)
+        # self.main_frame.grid(row=0, column=0, pady=5, padx=5)
+        self.main_frame.pack(side=tk.TOP, expand=True, ipadx=5, ipady=5)
         self.graph_labels = {}
 
         # create the frame for the buttons
         self.button_frame = tk.Frame(self)
-        self.button_frame.grid(row=2, column=0, pady=5, padx=5)
+        # self.button_frame.grid(row=1, column=0, pady=5, padx=5)
+        self.button_frame.pack(side=tk.BOTTOM, expand=True)
 
         # control buttons
         self.generate_button = tk.Button(
@@ -66,7 +50,7 @@ class MainApp(tk.Frame):
             width='10',
             command=self.generateGraph
         )
-        self.generate_button.pack()
+        self.generate_button.pack(anchor=tk.S)
         self.widgets['generate_button'] = self.generate_button
 
     @property
@@ -83,11 +67,8 @@ class MainApp(tk.Frame):
         except AttributeError:
             return 0
 
-    def toggleState(self, state):
-        """Toggles the states of interactable widgets stored in self.widgets.
-
-        :type state: str
-        """
+    def toggleState(self, state: str):
+        """Toggles the states of interactable widgets stored in self.widgets."""
         state = state if state in ('normal', 'disabled') else 'normal'
         for widget in self.widgets:
             # if isinstance(widget, tk.Label or tk.Frame):
@@ -99,7 +80,6 @@ class MainApp(tk.Frame):
     def bindings(self):
         """Sets key bindings for the app."""
         self.master.protocol('WM_DELETE_WINDOW', self.clickX)
-        # self.master.bind('<Button-1>', self.rerollDieHandler)
         pass
 
     def clickX(self):
@@ -119,7 +99,6 @@ class MainApp(tk.Frame):
         # self.graph = graph.testMap()
         self.graph = graph.Graph(5, 5)
         self.graph_labels = {}
-        self.images = [self.blank] * self.graph.size
         try:
             self.canvas.delete(tk.ALL)
             self.canvas.destroy()
@@ -128,9 +107,11 @@ class MainApp(tk.Frame):
 
         self.canvas = GraphCanvas(
             self.graph,
+            self.node_min_size,
+            self.canvas_pad,
             self.main_frame,
-            width=600 + 2 * self.canvas_pad,
-            height=600 + 2 * self.canvas_pad
+            width=self.x_grid * self.node_min_size + 2 * self.canvas_pad,
+            height=self.x_grid * self.node_min_size + 2 * self.canvas_pad
         )
         self.canvas.pack()
         self.canvas.placeLinks()
@@ -138,24 +119,24 @@ class MainApp(tk.Frame):
 
 
 class GraphCanvas(tk.Canvas):
-    node_min_size = 70
-    pad = 5
 
-    def __init__(self, graph: graph.Graph, *args, **kwargs):
+    def __init__(self, graph: graph.Graph, node_min_size, pad, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.graph = graph
+        self.node_min_size = node_min_size
+        self.pad = pad
 
     def placeLinks(self):
         for start_node_pos, links in self.graph.links_without_duplicates.items():
             for end_node_pos, weight in links.items():
-                print(start_node_pos, end_node_pos, weight)
+                # print(start_node_pos, end_node_pos, weight)
                 link_line = self.create_line(
                     (2 * start_node_pos.x + 0.5) * self.node_min_size + self.pad,
                     (2 * start_node_pos.y + 0.5) * self.node_min_size + self.pad,
                     (2 * end_node_pos.x + 0.5) * self.node_min_size + self.pad,
                     (2 * end_node_pos.y + 0.5) * self.node_min_size + self.pad,
                     width=4,
-                    fill='#FF00{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2)),
+                    fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2)),
                     tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'line')
                 )
 
@@ -190,14 +171,13 @@ class GraphCanvas(tk.Canvas):
                     link_ypos,
                     justify=tk.RIGHT,
                     text=weight,
-                    font=('Arial', 16),
-                    tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'weight'),
-                    # background='gray'
+                    font=('Arial', 15),
+                    tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'weight')
                 )
 
     def placeNodes(self):
         for node_pos, node in sorted(self.graph.nodes.items(), key=lambda elem: elem[0]):
-            print(node.name)
+            # print(node.name)
             node_ell = self.create_oval(
                 2 * node_pos.x * self.node_min_size + self.pad,
                 2 * node_pos.y * self.node_min_size + self.pad,
@@ -214,11 +194,10 @@ class GraphCanvas(tk.Canvas):
                 (2 * node_pos.y + 0.5) * self.node_min_size + self.pad,
                 justify=tk.RIGHT,
                 text=node.name + ', ' + str(node.value),
-                font=('Arial', 20),
+                font=('Arial', 18),
                 tags=node.name
             )
             # self.graph_labels[node_pos] = node_label
-
 
 
 def run():
