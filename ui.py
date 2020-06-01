@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 import logging as log
 
 import graph
@@ -9,12 +10,16 @@ log.basicConfig(level=log.INFO)
 # log.basicConfig(level=log.INFO, filename='info.log', )
 
 
-class MainApp(tk.Frame):
+
+
+
+class MainApp(ttk.Frame):
     node_min_size = 70
     canvas_pad = 5
+    pad = 5
 
     def __init__(self, master: tk.Tk):
-        tk.Frame.__init__(self, master)
+        ttk.Frame.__init__(self, master)
         self.master = master
         self.master.title("A* Algorithm | Tomas Karlik")
         self.grid()
@@ -23,35 +28,40 @@ class MainApp(tk.Frame):
         self.graph = None
         self.canvas = None
 
-        self.pad = 3
-        self.x = int((self.master.winfo_screenwidth() - self.master.winfo_reqwidth()) / 2 - 100)
-        self.y = int((self.master.winfo_screenheight() - self.master.winfo_reqheight()) / 3 - 70)
-        self.geom = '700x700+{}+{}'.format(self.x, self.y)
+        self.geom_size = (
+            max(int((self.master.winfo_screenwidth() - self.master.winfo_reqwidth()) / 2 - 100), 700),
+            max(int((self.master.winfo_screenheight() - self.master.winfo_reqheight()) / 3 - 70), 700)
+        )
+        self.geom_pos = (
+            int((self.master.winfo_screenwidth() - self.geom_size[0]) / 2),
+            int((self.master.winfo_screenheight() - self.geom_size[1]) / 3)
+        )
+        self.geom = '{}x{}+{}+{}'.format(*self.geom_size, *self.geom_pos)
+        # self.master.attributes('-fullscreen', True)
+        self.master.state('zoomed')
         master.geometry(self.geom)
+        self.master.update()
 
         self.bindings()
 
-        # add an area where an image will appear
-        self.main_frame = tk.Frame(self, height=650, width=700)
-        # self.main_frame.grid(row=0, column=0, pady=5, padx=5)
-        self.main_frame.pack(side=tk.TOP, expand=True, ipadx=5, ipady=5)
-        self.graph_labels = {}
+        style = ttk.Style()
+        style.configure('Kim.TFrame', background='red')
+        style.configure('Tot.TFrame', background='blue')
 
-        # create the frame for the buttons
-        self.button_frame = tk.Frame(self)
-        # self.button_frame.grid(row=1, column=0, pady=5, padx=5)
-        self.button_frame.pack(side=tk.BOTTOM, expand=True)
+        self.main_frame = ttk.Frame(self, width=4/5*self.master.winfo_width()-2*self.pad,
+                                    height=self.master.winfo_height()-2*self.pad, style='Kim.TFrame')
+        self.main_frame.grid(row=0, column=0, columnspan=4, padx=self.pad, pady=self.pad)
 
-        # control buttons
-        self.generate_button = tk.Button(
+        self.button_frame = ttk.Frame(self, width=1/5*self.master.winfo_width()-2*self.pad,
+                                      height=self.master.winfo_height()-2*self.pad, style='Tot.TFrame')
+        self.button_frame.grid(row=0, column=4, padx=self.pad, pady=self.pad)
+
+        self.gen_button = tk.Button(
             self.button_frame,
             text='Generuj mapu',
-            default='active',
-            width='10',
             command=self.generateGraph
         )
-        self.generate_button.pack(anchor=tk.S)
-        self.widgets['generate_button'] = self.generate_button
+        self.gen_button.pack(side=tk.BOTTOM)
 
     @property
     def x_grid(self):
@@ -95,10 +105,9 @@ class MainApp(tk.Frame):
         exit()
 
     def generateGraph(self):
-        print(self.main_frame.cget('background'))
         # self.graph = graph.testMap()
-        self.graph = graph.Graph(5, 5)
-        self.graph_labels = {}
+        self.graph = graph.Graph(2, 2)
+        # self.graph_labels = {}
         try:
             self.canvas.delete(tk.ALL)
             self.canvas.destroy()
@@ -110,8 +119,10 @@ class MainApp(tk.Frame):
             self.node_min_size,
             self.canvas_pad,
             self.main_frame,
-            width=self.x_grid * self.node_min_size + 2 * self.canvas_pad,
-            height=self.x_grid * self.node_min_size + 2 * self.canvas_pad
+            width=4 / 5 * self.master.winfo_width() - 2 * self.pad,
+            height=self.master.winfo_height() - 2 * self.pad
+            # width=self.x_grid * self.node_min_size + 2 * self.canvas_pad,
+            # height=self.x_grid * self.node_min_size + 2 * self.canvas_pad
         )
         self.canvas.pack()
         self.canvas.placeLinks()
@@ -123,7 +134,13 @@ class GraphCanvas(tk.Canvas):
     def __init__(self, graph: graph.Graph, node_min_size, pad, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.graph = graph
-        self.node_min_size = node_min_size
+        self.node_min_size = max(
+            node_min_size,
+            min(
+                int((kwargs['width'] - 2 * pad) / (2 * graph.x_size - 1)),
+                int((kwargs['height'] - 2 * pad) / (2 * graph.y_size - 1))
+            )
+        )
         self.pad = pad
 
     def placeLinks(self):
@@ -193,7 +210,7 @@ class GraphCanvas(tk.Canvas):
                 (2 * node_pos.x + 0.5) * self.node_min_size + self.pad,
                 (2 * node_pos.y + 0.5) * self.node_min_size + self.pad,
                 justify=tk.RIGHT,
-                text=node.name + ', ' + str(node.value),
+                text=node.name + '-' + str(node.value),
                 font=('Arial', 18),
                 tags=node.name
             )
