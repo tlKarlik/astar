@@ -22,7 +22,7 @@ class MainApp(ttk.Frame):
         ttk.Frame.__init__(self, master)
         self.master = master
         self.master.title("A* Algorithm | Tomas Karlik")
-        self.grid()
+        self.pack(fill=tk.BOTH, expand=tk.YES)
         self.widgets = {}
 
         self.graph = None
@@ -49,19 +49,22 @@ class MainApp(ttk.Frame):
         style.configure('Tot.TFrame', background='blue')
 
         self.main_frame = ttk.Frame(self, width=4/5*self.master.winfo_width()-2*self.pad,
-                                    height=self.master.winfo_height()-2*self.pad, style='Kim.TFrame')
-        self.main_frame.grid(row=0, column=0, columnspan=4, padx=self.pad, pady=self.pad)
+                                    height=self.master.winfo_height()-2*self.pad)
+        self.main_frame.grid(row=0, column=0, sticky='EWNS')
 
         self.button_frame = ttk.Frame(self, width=1/5*self.master.winfo_width()-2*self.pad,
-                                      height=self.master.winfo_height()-2*self.pad, style='Tot.TFrame')
-        self.button_frame.grid(row=0, column=4, padx=self.pad, pady=self.pad)
+                                      height=self.master.winfo_height()-2*self.pad)
+        self.button_frame.grid(row=0, column=1, sticky='EWNS', ipadx=self.pad, ipady=self.pad)
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
         self.gen_button = tk.Button(
             self.button_frame,
             text='Generuj mapu',
             command=self.generateGraph
         )
-        self.gen_button.pack(side=tk.BOTTOM)
+        self.gen_button.grid(sticky='NSEW')
 
     @property
     def x_grid(self):
@@ -90,6 +93,7 @@ class MainApp(ttk.Frame):
     def bindings(self):
         """Sets key bindings for the app."""
         self.master.protocol('WM_DELETE_WINDOW', self.clickX)
+        # self.master.bind("<Configure>", self.canvas.onResize)
         pass
 
     def clickX(self):
@@ -110,37 +114,47 @@ class MainApp(ttk.Frame):
         # self.graph_labels = {}
         try:
             self.canvas.delete(tk.ALL)
-            self.canvas.destroy()
+            self.canvas.graph = self.graph
         except AttributeError:
-            pass
+            self.canvas = GraphCanvas(
+                self.graph,
+                self.node_min_size,
+                self.canvas_pad,
+                self.main_frame,
+                # width=4 / 5 * self.master.winfo_width(),
+                # height=self.master.winfo_height(),
+                width=self.main_frame.winfo_width(),
+                height=self.main_frame.winfo_height(),
+                highlightthickness=0
+                # width=self.x_grid * self.node_min_size + 2 * self.canvas_pad,
+                # height=self.x_grid * self.node_min_size + 2 * self.canvas_pad
+            )
+            self.canvas.pack(fill=tk.BOTH, expand=tk.YES)
 
-        self.canvas = GraphCanvas(
-            self.graph,
-            self.node_min_size,
-            self.canvas_pad,
-            self.main_frame,
-            width=4 / 5 * self.master.winfo_width() - 2 * self.pad,
-            height=self.master.winfo_height() - 2 * self.pad
-            # width=self.x_grid * self.node_min_size + 2 * self.canvas_pad,
-            # height=self.x_grid * self.node_min_size + 2 * self.canvas_pad
-        )
-        self.canvas.pack()
         self.canvas.placeLinks()
         self.canvas.placeNodes()
+        self.canvas.addtag_all("all")
+        self.canvas.update()
+
+    # def onResize(self, event):
 
 
 class GraphCanvas(tk.Canvas):
 
     def __init__(self, graph: graph.Graph, node_min_size, pad, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.bind("<Configure>", self.onResize)
         self.graph = graph
-        self.node_min_size = max(
-            node_min_size,
+        self.node_min_size = node_min_size
+        self.node_size = max(
+            self.node_min_size,
             min(
                 int((kwargs['width'] - 2 * pad) / (2 * graph.x_size - 1)),
                 int((kwargs['height'] - 2 * pad) / (2 * graph.y_size - 1))
             )
         )
+        self.width = kwargs['width']
+        self.height = kwargs['height']
         self.pad = pad
 
     def placeLinks(self):
@@ -148,10 +162,10 @@ class GraphCanvas(tk.Canvas):
             for end_node_pos, weight in links.items():
                 # print(start_node_pos, end_node_pos, weight)
                 link_line = self.create_line(
-                    (2 * start_node_pos.x + 0.5) * self.node_min_size + self.pad,
-                    (2 * start_node_pos.y + 0.5) * self.node_min_size + self.pad,
-                    (2 * end_node_pos.x + 0.5) * self.node_min_size + self.pad,
-                    (2 * end_node_pos.y + 0.5) * self.node_min_size + self.pad,
+                    (2 * start_node_pos.x + 0.5) * self.node_size + self.pad,
+                    (2 * start_node_pos.y + 0.5) * self.node_size + self.pad,
+                    (2 * end_node_pos.x + 0.5) * self.node_size + self.pad,
+                    (2 * end_node_pos.y + 0.5) * self.node_size + self.pad,
                     width=4,
                     fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2)),
                     tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'line')
@@ -159,26 +173,26 @@ class GraphCanvas(tk.Canvas):
 
         for start_node_pos, links in self.graph.links_without_duplicates.items():
             for end_node_pos, weight in links.items():
-                link_xpos = (2 * start_node_pos.x + 1.5) * self.node_min_size + self.pad
-                link_ypos = (2 * start_node_pos.y + 1.5) * self.node_min_size + self.pad
+                link_xpos = (2 * start_node_pos.x + 1.5) * self.node_size + self.pad
+                link_ypos = (2 * start_node_pos.y + 1.5) * self.node_size + self.pad
 
                 if start_node_pos.x != end_node_pos.x and start_node_pos.y != end_node_pos.y:
                     if end_node_pos.x - start_node_pos.x < 0:
-                        link_xpos = (2 * start_node_pos.x - 0.2) * self.node_min_size + self.pad
+                        link_xpos = (2 * start_node_pos.x - 0.2) * self.node_size + self.pad
                     else:
-                        link_xpos = (2 * start_node_pos.x + 1.2) * self.node_min_size + self.pad
-                    link_ypos = (2 * start_node_pos.y + 1.2) * self.node_min_size + self.pad
+                        link_xpos = (2 * start_node_pos.x + 1.2) * self.node_size + self.pad
+                    link_ypos = (2 * start_node_pos.y + 1.2) * self.node_size + self.pad
                 else:
                     if start_node_pos.x != end_node_pos.x:
-                        link_ypos = (2 * start_node_pos.y + 0.5) * self.node_min_size + self.pad
+                        link_ypos = (2 * start_node_pos.y + 0.5) * self.node_size + self.pad
                     if start_node_pos.y != end_node_pos.y:
-                        link_xpos = (2 * start_node_pos.x + 0.5) * self.node_min_size + self.pad
+                        link_xpos = (2 * start_node_pos.x + 0.5) * self.node_size + self.pad
 
                 link_label_bg = self.create_oval(
-                    link_xpos - 0.2 * self.node_min_size,
-                    link_ypos - 0.2 * self.node_min_size,
-                    link_xpos + 0.2 * self.node_min_size,
-                    link_ypos + 0.2 * self.node_min_size,
+                    link_xpos - 0.2 * self.node_size,
+                    link_ypos - 0.2 * self.node_size,
+                    link_xpos + 0.2 * self.node_size,
+                    link_ypos + 0.2 * self.node_size,
                     fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2)),
                     outline='SystemButtonFace',
                     tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'weightbg')
@@ -196,10 +210,10 @@ class GraphCanvas(tk.Canvas):
         for node_pos, node in sorted(self.graph.nodes.items(), key=lambda elem: elem[0]):
             # print(node.name)
             node_ell = self.create_oval(
-                2 * node_pos.x * self.node_min_size + self.pad,
-                2 * node_pos.y * self.node_min_size + self.pad,
-                (2 * node_pos.x + 1) * self.node_min_size + self.pad,
-                (2 * node_pos.y + 1) * self.node_min_size + self.pad,
+                2 * node_pos.x * self.node_size + self.pad,
+                2 * node_pos.y * self.node_size + self.pad,
+                (2 * node_pos.x + 1) * self.node_size + self.pad,
+                (2 * node_pos.y + 1) * self.node_size + self.pad,
                 fill='#22AA22',
                 activefill='#55AA55',
                 outline='#22AA22',
@@ -207,14 +221,28 @@ class GraphCanvas(tk.Canvas):
                 tags=node.name
             )
             node_label = self.create_text(
-                (2 * node_pos.x + 0.5) * self.node_min_size + self.pad,
-                (2 * node_pos.y + 0.5) * self.node_min_size + self.pad,
+                (2 * node_pos.x + 0.5) * self.node_size + self.pad,
+                (2 * node_pos.y + 0.5) * self.node_size + self.pad,
                 justify=tk.RIGHT,
                 text=node.name + '-' + str(node.value),
                 font=('Arial', 18),
                 tags=node.name
             )
             # self.graph_labels[node_pos] = node_label
+
+    def onResize(self, event: tk.EventType):
+        print('resizing')
+        # determine the ratio of old width/height to new width/height
+        if event.width / self.graph.x_size < event.height / self.graph.y_size:
+            scale = float(event.width) / self.width
+            self.width, self.height = event.width, event.width
+        else:
+            scale = float(event.height) / self.height
+            self.width, self.height = event.height, event.height
+        # resize the canvas
+        self.config(width=self.width, height=self.height)
+        # rescale all the objects tagged with the "all" tag
+        self.scale("all", 0, 0, scale, scale)
 
 
 def run():
