@@ -110,7 +110,7 @@ class MainApp(ttk.Frame):
 
     def generateGraph(self):
         # self.graph = graph.testMap()
-        self.graph = graph.Graph(2, 2)
+        self.graph = graph.Graph(2, 3)
         # self.graph_labels = {}
         try:
             self.canvas.delete(tk.ALL)
@@ -155,6 +155,9 @@ class GraphCanvas(tk.Canvas):
         )
         self.width = kwargs['width']
         self.height = kwargs['height']
+        # self.width = max(kwargs['width'], (2 * self.graph.x_size - 1) * self.node_min_size)
+        # self.height = max(kwargs['height'], (2 * self.graph.y_size - 1) * self.node_min_size)
+        # self.configure(width=self.width, height=self.height)
         self.pad = pad
 
     def placeLinks(self):
@@ -231,17 +234,26 @@ class GraphCanvas(tk.Canvas):
             # self.graph_labels[node_pos] = node_label
 
     def onResize(self, event: tk.EventType):
-        print('resizing')
-        # determine the ratio of old width/height to new width/height
-        if event.width / self.graph.x_size < event.height / self.graph.y_size:
+        # TODO: change aspect ratio from square to actual node count
+        # determine the lesser of the two ratios
+        # if event.width / self.graph.x_size < event.height / self.graph.y_size:
+        if event.width < event.height:
+            xscale = float(event.width) / self.width
+            yscale = float(event.width) / self.height
             scale = float(event.width) / self.width
-            self.width, self.height = event.width, event.width
+            new_size = event.width
         else:
+            xscale = float(event.height) / self.width
+            yscale = float(event.height) / self.height
             scale = float(event.height) / self.height
-            self.width, self.height = event.height, event.height
+            new_size = event.height
+        if new_size < (2 * max(self.graph.x_size, self.graph.y_size) - 1) * self.node_min_size:
+            return
         # resize the canvas
+        # self.width = max(event.width, (2 * self.graph.x_size - 1) * self.node_min_size)
+        # self.height = max(event.height, (2 * self.graph.y_size - 1) * self.node_min_size)
+        self.width, self.height = new_size, new_size
         self.config(width=self.width, height=self.height)
-        # rescale all the objects tagged with the "all" tag
         self.scale("all", 0, 0, scale, scale)
 
 
