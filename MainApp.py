@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 import logging as log
+from typing import Dict
 
 import graph
 from GraphCanvas import GraphCanvas
@@ -12,9 +14,13 @@ log.basicConfig(level=log.INFO)
 
 
 class MainApp(ttk.Frame):
-    node_min_size = 70
-    canvas_pad = 5
-    pad = 5
+    node_min_size: int = 70
+    canvas_pad: int = 5
+    pad: int = 5
+    master: tk.Tk
+    widgets: Dict
+    graph: graph.Graph
+    canvas: GraphCanvas
 
     def __init__(self, master: tk.Tk):
         ttk.Frame.__init__(self, master)
@@ -35,34 +41,87 @@ class MainApp(ttk.Frame):
             int((self.master.winfo_screenheight() - self.geom_size[1]) / 3)
         )
         self.geom = '{}x{}+{}+{}'.format(*self.geom_size, *self.geom_pos)
-        # self.master.attributes('-fullscreen', True)
         self.master.state('zoomed')
         master.geometry(self.geom)
-        self.master.update()
-
-        self.bindings()
-
-        style = ttk.Style()
-        style.configure('Kim.TFrame', background='red')
-        style.configure('Tot.TFrame', background='blue')
 
         self.main_frame = ttk.Frame(self, width=4/5*self.master.winfo_width()-2*self.pad,
                                     height=self.master.winfo_height()-2*self.pad)
         self.main_frame.grid(row=0, column=0, sticky='EWNS')
-
         self.button_frame = ttk.Frame(self, width=1/5*self.master.winfo_width()-2*self.pad,
                                       height=self.master.winfo_height()-2*self.pad)
         self.button_frame.grid(row=0, column=1, sticky='EWNS', ipadx=self.pad, ipady=self.pad)
-
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
+        self.bindings()
+        self._controlsInit()
+        self.master.update()
+
+    def _controlsInit(self):
+        self._graphSizeControls()
+        self._startEndNodeControls()
+
         self.gen_button = tk.Button(
             self.button_frame,
-            text='Generuj mapu',
+            text='Generate New Graph',
             command=self.generateGraph
         )
-        self.gen_button.grid(sticky='NSEW')
+        self.widgets['generate_button'] = self.gen_button
+        self.gen_button.grid(row=4, column=0, columnspan=2)
+
+    def _graphSizeControls(self):
+        self.graph_xsize_label = tk.Label(
+            self.button_frame,
+            text='Graph width in # nodes:'
+        )
+        self.graph_xsize_label.grid(row=0, column=0)
+        self.graph_ysize_label = tk.Label(
+            self.button_frame,
+            text='Graph height in # nodes:'
+        )
+        self.graph_ysize_label.grid(row=0, column=1)
+        self.graph_xsize_control = ttk.Combobox(
+            self.button_frame,
+            values=list(range(2, 11))
+        )
+        self.graph_xsize_control.current(0)
+        self.widgets['xsize_combobox'] = self.graph_xsize_control
+        self.graph_xsize_control.grid(row=1, column=0)
+        self.graph_ysize_control = ttk.Combobox(
+            self.button_frame,
+            values=list(range(2, 11))
+        )
+        self.graph_ysize_control.current(0)
+        self.widgets['ysize_combobox'] = self.graph_ysize_control
+        self.graph_ysize_control.grid(row=1, column=1)
+
+    def _startEndNodeControls(self):
+        self.start_node_label = tk.Label(
+            self.button_frame,
+            text='Start node:'
+        )
+        self.start_node_label.grid(row=2, column=0)
+
+        start_node_select = ttk.Combobox(
+            self.button_frame,
+            values=[],
+            state='disabled'
+        )
+        self.widgets['start_node_combobox'] = start_node_select
+        start_node_select.grid(row=2, column=1)
+
+        self.end_node_label = tk.Label(
+            self.button_frame,
+            text='End node:'
+        )
+        self.end_node_label.grid(row=3, column=0)
+        end_node_select = ttk.Combobox(
+            self.button_frame,
+            values=[],
+            state='disabled'
+        )
+        self.widgets['end_node_combobox'] = end_node_select
+        end_node_select.grid(row=3, column=1)
 
     @property
     def x_grid(self):
@@ -108,7 +167,13 @@ class MainApp(ttk.Frame):
 
     def generateGraph(self):
         # self.graph = graph.testMap()
-        self.graph = graph.Graph(2, 5)
+        try:
+            graph_width = int(self.graph_xsize_control.current()) + 2
+            graph_height = int(self.graph_ysize_control.current()) + 2
+        except ValueError:
+            messagebox.showwarning('Warning', 'Choose graph size first')
+            return
+        self.graph = graph.Graph(graph_width, graph_height)
         # self.graph_labels = {}
         try:
             self.canvas.delete(tk.ALL)
@@ -119,22 +184,25 @@ class MainApp(ttk.Frame):
                 self.node_min_size,
                 self.canvas_pad,
                 self.main_frame,
-                # width=4 / 5 * self.master.winfo_width(),
-                # height=self.master.winfo_height(),
                 width=self.main_frame.winfo_width(),
                 height=self.main_frame.winfo_height(),
-                background='white',
                 highlightthickness=0
-                # width=self.x_grid * self.node_min_size + 2 * self.canvas_pad,
-                # height=self.x_grid * self.node_min_size + 2 * self.canvas_pad
             )
             self.canvas.pack(fill=tk.BOTH, expand=tk.YES)
 
         self.canvas.placeLinks()
         self.canvas.placeNodes()
         self.canvas.addtag_all("all")
-
         self.canvas.update()
+
+        self.widgets['start_node_combobox'].configure(
+            state='active',
+            values=sorted([node.name for node in self.graph.nodes.values()], key=lambda x: x.zfill(3))
+        )
+        self.widgets['end_node_combobox'].configure(
+            state='active',
+            values=sorted([node.name for node in self.graph.nodes.values()], key=lambda x: x.zfill(3))
+        )
 
 
 def run():

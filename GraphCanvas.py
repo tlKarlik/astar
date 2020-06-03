@@ -4,6 +4,9 @@ import graph
 
 
 class GraphCanvas(tk.Canvas):
+    node_min_size: int
+    pad: int
+    graph: graph.Graph
 
     def __init__(self, graph: graph.Graph, node_min_size, pad, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -20,11 +23,12 @@ class GraphCanvas(tk.Canvas):
     def setGraph(self, new_graph: graph.Graph):
         self.graph = new_graph
         self.aspect_ratio = (2 * new_graph.x_size - 1) / (2 * new_graph.y_size - 1)
+        print(self.master.winfo_width(), self.master.winfo_height())
         self.node_size = max(
             self.node_min_size,
             min(
-                int((self.master.cget('width') - 2 * self.pad) / (2 * self.graph.x_size - 1)),
-                int((self.master.cget('height') - 2 * self.pad) / (2 * self.graph.y_size - 1))
+                int((self.master.winfo_width() - 2 * self.pad) / (2 * self.graph.x_size - 1)),
+                int((self.master.winfo_height() - 2 * self.pad) / (2 * self.graph.y_size - 1))
             )
         )
         self.width = (2 * self.graph.x_size - 1) * self.node_size + 2 * self.pad
@@ -69,6 +73,7 @@ class GraphCanvas(tk.Canvas):
                     link_ypos + 0.2 * self.node_size,
                     fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2)),
                     outline='SystemButtonFace',
+                    width=2,
                     tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'weightbg')
                 )
                 link_label = self.create_text(
@@ -90,7 +95,9 @@ class GraphCanvas(tk.Canvas):
                 (2 * node_pos.y + 1) * self.node_size + self.pad,
                 fill='#22AA22',
                 activefill='#55AA55',
-                outline='#22AA22',
+                # outline='#22AA22',
+                outline='SystemButtonFace',
+                width=2,
                 activeoutline='#55AA55',
                 tags=node.name
             )
