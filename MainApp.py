@@ -57,6 +57,20 @@ class MainApp(ttk.Frame):
         self._controlsInit()
         self.master.update()
 
+    @property
+    def x_grid(self):
+        try:
+            return 2 * self.graph.x_size - 1
+        except AttributeError:
+            return 0
+
+    @property
+    def y_grid(self):
+        try:
+            return 2 * self.graph.y_size - 1
+        except AttributeError:
+            return 0
+
     def _controlsInit(self):
         self._graphSizeControls()
         self._startEndNodeControls()
@@ -64,10 +78,10 @@ class MainApp(ttk.Frame):
         self.gen_button = tk.Button(
             self.button_frame,
             text='Generate New Graph',
-            command=self.generateGraph
+            command=self._generateGraph
         )
         self.widgets['generate_button'] = self.gen_button
-        self.gen_button.grid(row=4, column=0, columnspan=2)
+        self.gen_button.grid(row=10, column=0, columnspan=2)
 
     def _graphSizeControls(self):
         self.graph_xsize_label = tk.Label(
@@ -98,44 +112,33 @@ class MainApp(ttk.Frame):
     def _startEndNodeControls(self):
         self.start_node_label = tk.Label(
             self.button_frame,
-            text='Start node:'
+            text='Select start and end nodes:'
         )
-        self.start_node_label.grid(row=2, column=0)
+        self.start_node_label.grid(row=2, column=0, columnspan=2)
 
-        start_node_select = ttk.Combobox(
+        node_select = tk.Listbox(
             self.button_frame,
-            values=[],
+            selectmode=tk.SINGLE,
             state='disabled'
         )
-        self.widgets['start_node_combobox'] = start_node_select
-        start_node_select.grid(row=2, column=1)
+        self.widgets['node_listbox'] = node_select
+        node_select.grid(row=3, column=0, columnspan=2)
 
-        self.end_node_label = tk.Label(
+        start_node_button = tk.Button(
             self.button_frame,
-            text='End node:'
+            text='Start Node',
+            command=lambda: self._setNode('start')
         )
-        self.end_node_label.grid(row=3, column=0)
-        end_node_select = ttk.Combobox(
+        self.widgets['start_node_button'] = start_node_button
+        start_node_button.grid(row=4, column=0, sticky='E')
+
+        goal_node_button = tk.Button(
             self.button_frame,
-            values=[],
-            state='disabled'
+            text='Goal Node',
+            command=lambda: self._setNode('goal')
         )
-        self.widgets['end_node_combobox'] = end_node_select
-        end_node_select.grid(row=3, column=1)
-
-    @property
-    def x_grid(self):
-        try:
-            return 2 * self.graph.x_size - 1
-        except AttributeError:
-            return 0
-
-    @property
-    def y_grid(self):
-        try:
-            return 2 * self.graph.y_size - 1
-        except AttributeError:
-            return 0
+        self.widgets['goal_node_button'] = goal_node_button
+        goal_node_button.grid(row=4, column=1, sticky='W')
 
     def toggleState(self, state: str):
         """Toggles the states of interactable widgets stored in self.widgets."""
@@ -149,11 +152,22 @@ class MainApp(ttk.Frame):
 
     def bindings(self):
         """Sets key bindings for the app."""
-        self.master.protocol('WM_DELETE_WINDOW', self.clickX)
+        self.master.protocol('WM_DELETE_WINDOW', self._clickX)
         # self.master.bind("<Configure>", self.canvas.onResize)
         pass
 
-    def clickX(self):
+    def _setNode(self, node_type: str):
+        selection = int(self.widgets['node_listbox'].curselection()[0])
+        node_pos = self.ordered_nodes[selection][1]
+        if node_type == 'start':
+            self.graph.setStartNode(node_pos)
+        elif node_type == 'goal':
+            self.graph.setGoalNode(node_pos)
+            self.canvas.updateNodeValues()
+        else:
+            raise ValueError('Uknown node_type (got {} instead of "start" or "goal")'.format(node_type))
+
+    def _clickX(self):
         """Executes the routine to shut the application."""
         log.info('User exited the app by pressing X')
         self.master.destroy()
@@ -165,15 +179,19 @@ class MainApp(ttk.Frame):
         self.master.destroy()
         exit()
 
-    def generateGraph(self):
+    def _generateGraph(self):
         # self.graph = graph.testMap()
         try:
             graph_width = int(self.graph_xsize_control.current()) + 2
             graph_height = int(self.graph_ysize_control.current()) + 2
         except ValueError:
-            messagebox.showwarning('Warning', 'Choose graph size first')
+            messagebox.showwarning('Warning', 'Choose correct graph size first')
             return
         self.graph = graph.Graph(graph_width, graph_height)
+        self.ordered_nodes = sorted(
+            [(node.name, node.pos) for node in self.graph.nodes.values()],
+            key=lambda x: x[0].zfill(3)
+        )
         # self.graph_labels = {}
         try:
             self.canvas.delete(tk.ALL)
@@ -195,14 +213,9 @@ class MainApp(ttk.Frame):
         self.canvas.addtag_all("all")
         self.canvas.update()
 
-        self.widgets['start_node_combobox'].configure(
-            state='active',
-            values=sorted([node.name for node in self.graph.nodes.values()], key=lambda x: x.zfill(3))
-        )
-        self.widgets['end_node_combobox'].configure(
-            state='active',
-            values=sorted([node.name for node in self.graph.nodes.values()], key=lambda x: x.zfill(3))
-        )
+        self.widgets['node_listbox'].configure(state='normal')
+        self.widgets['node_listbox'].delete(0, tk.END)
+        self.widgets['node_listbox'].insert(tk.END, *[node_name for node_name, node_pos in self.ordered_nodes])
 
 
 def run():

@@ -103,11 +103,19 @@ class GraphCanvas(tk.Canvas):
             )
             node_label = self.create_text(
                 (2 * node_pos.x + 0.5) * self.node_size + self.pad,
-                (2 * node_pos.y + 0.5) * self.node_size + self.pad,
+                (2 * node_pos.y + 0.5) * self.node_size + self.pad + 3,
                 justify=tk.RIGHT,
-                text=node.name + '-' + str(node.value),
+                text=node.name,
                 font=('Arial', 18),
-                tags=node.name
+                tags=(node.name, 'node_label')
+            )
+            node_value = self.create_text(
+                (2 * node_pos.x + 0.5) * self.node_size + self.pad,
+                (2 * node_pos.y + 0.5) * self.node_size + self.pad - 20,
+                justify=tk.RIGHT,
+                text='({})'.format(node.value),
+                font=('Arial', 10),
+                tags=(repr(node_pos).replace(' ', ''), 'node_value')
             )
             # self.graph_labels[node_pos] = node_label
 
@@ -120,4 +128,15 @@ class GraphCanvas(tk.Canvas):
         self.width, self.height = new_size, new_size
         self.config(width=self.width, height=self.height)
         self.scale("all", 0, 0, scale, scale)
+        self.update()
+
+    def updateNodeValues(self):
+        for node_value_id in self.find_withtag('node_value'):
+            tags = self.gettags(node_value_id)
+            if tags[0] == 'node_value':
+                pos_tag = tags[1]
+            else:
+                pos_tag = tags[0]
+            position = eval('graph.{}'.format(pos_tag))
+            self.itemconfig(node_value_id, text='({})'.format(self.graph.nodes[position].value))
         self.update()
