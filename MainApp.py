@@ -159,6 +159,9 @@ class MainApp(ttk.Frame):
     def _setNodeCallback(self, node_type: str):
         selection = int(self.widgets['node_listbox'].curselection()[0])
         node_pos = self.ordered_nodes[selection][1]
+        if node_pos == self.graph.start or node_pos == self.graph.goal:
+            messagebox.showwarning('Warning', 'Node already selected as start or goal. Please, pick another node.')
+            return
         if node_type == 'start':
             self.canvas.updateStartGoalNodes(new_start=node_pos)
         elif node_type == 'goal':
