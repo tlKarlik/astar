@@ -23,7 +23,6 @@ class GraphCanvas(tk.Canvas):
     def setGraph(self, new_graph: graph.Graph):
         self.graph = new_graph
         self.aspect_ratio = (2 * new_graph.x_size - 1) / (2 * new_graph.y_size - 1)
-        print(self.master.winfo_width(), self.master.winfo_height())
         self.node_size = max(
             self.node_min_size,
             min(
@@ -72,7 +71,7 @@ class GraphCanvas(tk.Canvas):
                     link_xpos + 0.2 * self.node_size,
                     link_ypos + 0.2 * self.node_size,
                     fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2)),
-                    outline='SystemButtonFace',
+                    outline='#FFFFFF',
                     width=2,
                     tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'weightbg')
                 )
@@ -87,7 +86,6 @@ class GraphCanvas(tk.Canvas):
 
     def placeNodes(self):
         for node_pos, node in sorted(self.graph.nodes.items(), key=lambda elem: elem[0]):
-            # print(node.name)
             node_ell = self.create_oval(
                 2 * node_pos.x * self.node_size + self.pad,
                 2 * node_pos.y * self.node_size + self.pad,
@@ -96,7 +94,7 @@ class GraphCanvas(tk.Canvas):
                 fill='#22AA22',
                 activefill='#55AA55',
                 # outline='#22AA22',
-                outline='SystemButtonFace',
+                outline='#FFFFFF',
                 width=2,
                 activeoutline='#55AA55',
                 tags=node.name
@@ -119,13 +117,22 @@ class GraphCanvas(tk.Canvas):
             )
             # self.graph_labels[node_pos] = node_label
 
-    def _onResize(self, event: tk.EventType):
-        # TODO: change aspect ratio from square to actual node count
-        new_size = min(event.width, event.height)
-        if new_size < (2 * max(self.graph.x_size, self.graph.y_size) - 1) * self.node_min_size:
-            return
-        scale = min(event.width / self.width, event.height / self.height)
-        self.width, self.height = new_size, new_size
+    def _onResize(self, event):
+        min_width = (2 * self.graph.x_size - 1) * self.node_min_size
+        min_height = (2 * self.graph.y_size - 1) * self.node_min_size
+
+        # if the aspect ratio of the new window is smaller than the aspect ratio of the graph, use width,
+        # otherwise use height
+        if event.width / event.height < self.aspect_ratio:
+            new_width = max(event.width, min_width)
+            new_height = new_width / self.aspect_ratio
+            scale = new_width / self.width
+        else:
+            new_height = max(event.height, min_height)
+            new_width = self.aspect_ratio * new_height
+            scale = new_height / self.height
+
+        self.width, self.height = new_width, new_height
         self.config(width=self.width, height=self.height)
         self.scale("all", 0, 0, scale, scale)
         self.update()

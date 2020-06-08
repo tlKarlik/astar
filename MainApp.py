@@ -204,13 +204,14 @@ class MainApp(ttk.Frame):
                 self.main_frame,
                 width=self.main_frame.winfo_width(),
                 height=self.main_frame.winfo_height(),
+                background='#FFFFFF',
                 highlightthickness=0
             )
             self.canvas.pack(fill=tk.BOTH, expand=tk.YES)
 
         self.canvas.placeLinks()
         self.canvas.placeNodes()
-        self.canvas.addtag_all("all")
+        # self.canvas.addtag_all("all")
         self.canvas.update()
 
         self.widgets['node_listbox'].configure(state='normal')
