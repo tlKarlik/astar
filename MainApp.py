@@ -5,6 +5,7 @@ import logging as log
 from typing import Dict
 
 import graph
+import astar_search
 from GraphCanvas import GraphCanvas
 
 
@@ -47,9 +48,17 @@ class MainApp(ttk.Frame):
         self.main_frame = ttk.Frame(self, width=4/5*self.master.winfo_width()-2*self.pad,
                                     height=self.master.winfo_height()-2*self.pad)
         self.main_frame.grid(row=0, column=0, sticky='EWNS')
-        self.button_frame = ttk.Frame(self, width=1/5*self.master.winfo_width()-2*self.pad,
-                                      height=self.master.winfo_height()-2*self.pad)
-        self.button_frame.grid(row=0, column=1, sticky='EWNS', ipadx=self.pad, ipady=self.pad)
+        # self.control_frame = ttk.Frame(self, width=1 / 5 * self.master.winfo_width() - 2 * self.pad,
+        #                                height=self.master.winfo_height()-2*self.pad)
+        # self.control_frame.grid(row=0, column=1, sticky='EWNS', ipadx=self.pad, ipady=self.pad)
+
+        self.tab_control = ttk.Notebook(self)
+        self.settings_frame = ttk.Frame(self.tab_control)
+        self.pathfinding_frame = ttk.Frame(self.tab_control)
+        self.tab_control.add(self.settings_frame, text='Settings')
+        self.tab_control.add(self.pathfinding_frame, text='Pathfinding')
+        self.tab_control.grid(row=0, column=1, sticky='EWNS', ipadx=self.pad, ipady=self.pad)
+
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -76,33 +85,41 @@ class MainApp(ttk.Frame):
         self._startEndNodeControls()
 
         self.gen_button = tk.Button(
-            self.button_frame,
+            self.settings_frame,
             text='Generate New Graph',
             command=self._generateGraph
         )
         self.widgets['generate_button'] = self.gen_button
         self.gen_button.grid(row=10, column=0, columnspan=2)
 
+        self.find_path_button = tk.Button(
+            self.pathfinding_frame,
+            text='Find Path!',
+            command=self._findPath
+        )
+        self.widgets['find_path_button'] = self.find_path_button
+        self.find_path_button.grid(row=10, column=0, columnspan=2)
+
     def _graphSizeControls(self):
         self.graph_xsize_label = tk.Label(
-            self.button_frame,
+            self.settings_frame,
             text='Graph width in # nodes:'
         )
         self.graph_xsize_label.grid(row=0, column=0)
         self.graph_ysize_label = tk.Label(
-            self.button_frame,
+            self.settings_frame,
             text='Graph height in # nodes:'
         )
         self.graph_ysize_label.grid(row=0, column=1)
         self.graph_xsize_control = ttk.Combobox(
-            self.button_frame,
+            self.settings_frame,
             values=list(range(2, 11))
         )
         self.graph_xsize_control.current(0)
         self.widgets['xsize_combobox'] = self.graph_xsize_control
         self.graph_xsize_control.grid(row=1, column=0)
         self.graph_ysize_control = ttk.Combobox(
-            self.button_frame,
+            self.settings_frame,
             values=list(range(2, 11))
         )
         self.graph_ysize_control.current(0)
@@ -111,13 +128,13 @@ class MainApp(ttk.Frame):
 
     def _startEndNodeControls(self):
         self.start_node_label = tk.Label(
-            self.button_frame,
+            self.settings_frame,
             text='Select start and end nodes:'
         )
         self.start_node_label.grid(row=2, column=0, columnspan=2)
 
         node_select = tk.Listbox(
-            self.button_frame,
+            self.settings_frame,
             selectmode=tk.SINGLE,
             state='disabled'
         )
@@ -125,7 +142,7 @@ class MainApp(ttk.Frame):
         node_select.grid(row=3, column=0, columnspan=2)
 
         start_node_button = tk.Button(
-            self.button_frame,
+            self.settings_frame,
             text='Start Node',
             command=lambda: self._setNodeCallback('start')
         )
@@ -133,7 +150,7 @@ class MainApp(ttk.Frame):
         start_node_button.grid(row=4, column=0, sticky='E')
 
         goal_node_button = tk.Button(
-            self.button_frame,
+            self.settings_frame,
             text='Goal Node',
             command=lambda: self._setNodeCallback('goal')
         )
@@ -220,6 +237,9 @@ class MainApp(ttk.Frame):
         self.widgets['node_listbox'].configure(state='normal')
         self.widgets['node_listbox'].delete(0, tk.END)
         self.widgets['node_listbox'].insert(tk.END, *[node_name for node_name, node_pos in self.ordered_nodes])
+
+    def _findPath(self):
+        data = astar_search.aStar(self.graph)
 
 
 def run():

@@ -67,7 +67,7 @@ class Path(list):
         return len(self)
 
 
-def aStar(work_graph: graph.Graph):
+def aStar(work_graph: graph.Graph) -> Dict:
     """Searches for the shortest path from start to goal."""
     # Set current level to infinity and other counters
     # TODO: add more data to track
