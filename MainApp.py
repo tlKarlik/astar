@@ -127,7 +127,7 @@ class MainApp(ttk.Frame):
         start_node_button = tk.Button(
             self.button_frame,
             text='Start Node',
-            command=lambda: self._setNode('start')
+            command=lambda: self._setNodeCallback('start')
         )
         self.widgets['start_node_button'] = start_node_button
         start_node_button.grid(row=4, column=0, sticky='E')
@@ -135,7 +135,7 @@ class MainApp(ttk.Frame):
         goal_node_button = tk.Button(
             self.button_frame,
             text='Goal Node',
-            command=lambda: self._setNode('goal')
+            command=lambda: self._setNodeCallback('goal')
         )
         self.widgets['goal_node_button'] = goal_node_button
         goal_node_button.grid(row=4, column=1, sticky='W')
@@ -152,22 +152,21 @@ class MainApp(ttk.Frame):
 
     def bindings(self):
         """Sets key bindings for the app."""
-        self.master.protocol('WM_DELETE_WINDOW', self._clickX)
+        self.master.protocol('WM_DELETE_WINDOW', self._clickXCallback)
         # self.master.bind("<Configure>", self.canvas.onResize)
         pass
 
-    def _setNode(self, node_type: str):
+    def _setNodeCallback(self, node_type: str):
         selection = int(self.widgets['node_listbox'].curselection()[0])
         node_pos = self.ordered_nodes[selection][1]
         if node_type == 'start':
-            self.graph.setStartNode(node_pos)
+            self.canvas.updateStartGoalNodes(new_start=node_pos)
         elif node_type == 'goal':
-            self.graph.setGoalNode(node_pos)
-            self.canvas.updateNodeValues()
+            self.canvas.updateStartGoalNodes(new_goal=node_pos)
         else:
             raise ValueError('Uknown node_type (got {} instead of "start" or "goal")'.format(node_type))
 
-    def _clickX(self):
+    def _clickXCallback(self):
         """Executes the routine to shut the application."""
         log.info('User exited the app by pressing X')
         self.master.destroy()
@@ -211,6 +210,7 @@ class MainApp(ttk.Frame):
 
         self.canvas.placeLinks()
         self.canvas.placeNodes()
+        self.canvas.updateStartGoalNodes(new_start=self.graph.start, new_goal=self.graph.goal)
         # self.canvas.addtag_all("all")
         self.canvas.update()
 

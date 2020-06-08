@@ -1,14 +1,18 @@
 import tkinter as tk
 
-import graph
+from graph import Pos, Graph, Node
 
 
 class GraphCanvas(tk.Canvas):
     node_min_size: int
     pad: int
-    graph: graph.Graph
+    graph: Graph
+    node_color = '#A0A0A0'
+    selected_node_color = '#DDDDDD'
+    node_outline_color = '#FFFFFF'
+    selected_node_outline_color = '#AA1010'
 
-    def __init__(self, graph: graph.Graph, node_min_size, pad, *args, **kwargs):
+    def __init__(self, graph: Graph, node_min_size, pad, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bind("<Configure>", self._onResize)
         self.node_min_size = node_min_size
@@ -20,7 +24,7 @@ class GraphCanvas(tk.Canvas):
         self.height = None
         self.setGraph(graph)
 
-    def setGraph(self, new_graph: graph.Graph):
+    def setGraph(self, new_graph: Graph):
         self.graph = new_graph
         self.aspect_ratio = (2 * new_graph.x_size - 1) / (2 * new_graph.y_size - 1)
         self.node_size = max(
@@ -71,7 +75,7 @@ class GraphCanvas(tk.Canvas):
                     link_xpos + 0.2 * self.node_size,
                     link_ypos + 0.2 * self.node_size,
                     fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2)),
-                    outline='#FFFFFF',
+                    outline=self.node_outline_color,
                     width=2,
                     tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'weightbg')
                 )
@@ -91,13 +95,12 @@ class GraphCanvas(tk.Canvas):
                 2 * node_pos.y * self.node_size + self.pad,
                 (2 * node_pos.x + 1) * self.node_size + self.pad,
                 (2 * node_pos.y + 1) * self.node_size + self.pad,
-                fill='#22AA22',
-                activefill='#55AA55',
+                fill=self.node_color,
                 # outline='#22AA22',
-                outline='#FFFFFF',
+                outline=self.node_outline_color,
                 width=2,
-                activeoutline='#55AA55',
-                tags=node.name
+                activeoutline=self.node_color,
+                tags=(repr(node.pos).replace(' ', ''), 'node_ellipse')
             )
             node_label = self.create_text(
                 (2 * node_pos.x + 0.5) * self.node_size + self.pad,
@@ -144,6 +147,32 @@ class GraphCanvas(tk.Canvas):
                 pos_tag = tags[1]
             else:
                 pos_tag = tags[0]
-            position = eval('graph.{}'.format(pos_tag))
-            self.itemconfig(node_value_id, text='({})'.format(self.graph.nodes[position].value))
+            self.itemconfig(node_value_id, text='({})'.format(self.graph.nodes[eval(pos_tag)].value))
         self.update()
+        
+    def updateStartGoalNodes(self, new_start: Pos = None, new_goal: Pos = None):
+        if new_start is not None:
+            self._updateNodes(new_start, self.graph.start)
+            self.graph.setStartNode(new_start)
+        if new_goal is not None:
+            self._updateNodes(new_goal, self.graph.goal)
+            self.graph.setGoalNode(new_goal)
+            self.updateNodeValues()
+
+    def _updateNodes(self, new_node: Pos, old_node: Pos):
+        node_ellipse_ids = self.find_withtag('node_ellipse')
+        for node_ellipse_id in node_ellipse_ids:
+            if repr(new_node).replace(' ', '') in self.gettags(node_ellipse_id):
+                self.itemconfig(
+                    node_ellipse_id,
+                    outline=self.selected_node_outline_color,
+                    fill=self.selected_node_color,
+                    width=8,
+                    activeoutline=self.selected_node_color)
+            elif repr(old_node).replace(' ', '') in self.gettags(node_ellipse_id):
+                self.itemconfig(
+                    node_ellipse_id,
+                    outline=self.node_outline_color,
+                    fill=self.node_color,
+                    width=2,
+                    activeoutline=self.node_color)
