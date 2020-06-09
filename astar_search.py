@@ -8,7 +8,12 @@ from path import Path
 Int_or_Float = TypeVar('Int_or_Float', int, float)
 
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+logging.basicConfig(
+    filename='output/search.info',
+    filemode='w',
+    level=logging.INFO,
+    format='%(message)s'
+)
 
 
 def aStar(work_graph: Graph) -> Dict:

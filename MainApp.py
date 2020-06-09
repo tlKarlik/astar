@@ -4,9 +4,11 @@ from tkinter import messagebox
 import logging as log
 from typing import Dict
 
-import graph
+# import graph
 import astar_search
+from graph import Node, Graph
 from GraphCanvas import GraphCanvas
+from path import Path
 
 
 # Logging config
@@ -20,7 +22,7 @@ class MainApp(ttk.Frame):
     pad: int = 5
     master: tk.Tk
     widgets: Dict
-    graph: graph.Graph
+    graph: Graph
     canvas: GraphCanvas
 
     def __init__(self, master: tk.Tk):
@@ -52,9 +54,14 @@ class MainApp(ttk.Frame):
         #                                height=self.master.winfo_height()-2*self.pad)
         # self.control_frame.grid(row=0, column=1, sticky='EWNS', ipadx=self.pad, ipady=self.pad)
 
+        new_style = ttk.Style()
+        new_style.configure('test.TFrame', background='green', padding=self.pad)
+
         self.tab_control = ttk.Notebook(self)
         self.settings_frame = ttk.Frame(self.tab_control)
-        self.pathfinding_frame = ttk.Frame(self.tab_control)
+        self.settings_frame.pack(fill=tk.BOTH, expand=True)
+        self.pathfinding_frame = ttk.Frame(self.tab_control, style='test.TFrame')
+        # self.pathfinding_frame.pack(fill=tk.BOTH, expand=True)
         self.tab_control.add(self.settings_frame, text='Settings')
         self.tab_control.add(self.pathfinding_frame, text='Pathfinding')
         self.tab_control.grid(row=0, column=1, sticky='EWNS', ipadx=self.pad, ipady=self.pad)
@@ -87,10 +94,21 @@ class MainApp(ttk.Frame):
         self.gen_button = tk.Button(
             self.settings_frame,
             text='Generate New Graph',
-            command=self._generateGraph
+            command=self._generateGraphCallback
         )
         self.widgets['generate_button'] = self.gen_button
         self.gen_button.grid(row=10, column=0, columnspan=2)
+
+        self.output_text = tk.Text(
+            self.pathfinding_frame,
+            # width=300,
+            font=('Courier', 10),
+            wrap=tk.NONE,
+            foreground='#BB0000',
+            state='disabled'
+        )
+        self.widgets['output_text'] = self.output_text
+        self.output_text.grid(row=0, column=0, sticky='EWNS')
 
         self.find_path_button = tk.Button(
             self.pathfinding_frame,
@@ -98,7 +116,7 @@ class MainApp(ttk.Frame):
             command=self._findPath
         )
         self.widgets['find_path_button'] = self.find_path_button
-        self.find_path_button.grid(row=10, column=0, columnspan=2)
+        self.find_path_button.grid(row=10, column=0)
 
     def _graphSizeControls(self):
         self.graph_xsize_label = tk.Label(
@@ -198,7 +216,7 @@ class MainApp(ttk.Frame):
         self.master.destroy()
         exit()
 
-    def _generateGraph(self):
+    def _generateGraphCallback(self):
         # self.graph = graph.testMap()
         try:
             graph_width = int(self.graph_xsize_control.current()) + 2
@@ -206,7 +224,7 @@ class MainApp(ttk.Frame):
         except ValueError:
             messagebox.showwarning('Warning', 'Choose correct graph size first')
             return
-        self.graph = graph.Graph(graph_width, graph_height)
+        self.graph = Graph(graph_width, graph_height)
         self.ordered_nodes = sorted(
             [(node.name, node.pos) for node in self.graph.nodes.values()],
             key=lambda x: x[0].zfill(3)
@@ -240,6 +258,19 @@ class MainApp(ttk.Frame):
 
     def _findPath(self):
         data = astar_search.aStar(self.graph)
+        with open('output/search.info', 'r') as search_info_file:
+            search_info = search_info_file.read()
+        print(search_info)
+        self.output_text.config(state='normal')
+        self.output_text.delete(1.0, tk.END)
+        self.output_text.insert(tk.END, search_info)
+        self.output_text.config(state='disabled')
+        self.output_text.update()
+
+        best_path: Path[Node] = data['best_path']
+
+
+
 
 
 def run():

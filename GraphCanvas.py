@@ -1,12 +1,14 @@
 import tkinter as tk
 
 from graph import Pos, Graph, Node
+from path import Path
 
 
 class GraphCanvas(tk.Canvas):
     node_min_size: int
     pad: int
     graph: Graph
+    path: Path[Node]
     node_color = '#A0A0A0'
     selected_node_color = '#DDDDDD'
     node_outline_color = '#FFFFFF'
@@ -22,6 +24,7 @@ class GraphCanvas(tk.Canvas):
         self.node_size = None
         self.width = None
         self.height = None
+        self.path = None
         self.setGraph(graph)
 
     def setGraph(self, new_graph: Graph):
@@ -168,11 +171,15 @@ class GraphCanvas(tk.Canvas):
                     outline=self.selected_node_outline_color,
                     fill=self.selected_node_color,
                     width=8,
-                    activeoutline=self.selected_node_color)
+                    activeoutline=self.selected_node_color
+                )
             elif repr(old_node).replace(' ', '') in self.gettags(node_ellipse_id):
                 self.itemconfig(
                     node_ellipse_id,
                     outline=self.node_outline_color,
                     fill=self.node_color,
                     width=2,
-                    activeoutline=self.node_color)
+                    activeoutline=self.node_color
+                )
+
+

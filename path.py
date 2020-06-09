@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List, TypeVar
 
 from graph import Node
@@ -33,10 +34,6 @@ class Path(list):
             sw[self.enabled], self[0].x, self[0].y, path, self[-1].x, self[-1].y)
 
     def __add__(self, rhs: Path) -> Path:
-        """
-        :type rhs: Path
-        :rtype: Path
-        """
         new_length = self.length + rhs.length
         return Path(list.__add__(self, rhs), new_length)
 
