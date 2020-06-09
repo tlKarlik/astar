@@ -1,7 +1,8 @@
 import logging
-from typing import List, TypeVar, Dict, Any
+from typing import TypeVar, Dict, Any
 
-import graph
+from graph import Graph, Node, testMap, testMap2
+from path import Path
 
 
 Int_or_Float = TypeVar('Int_or_Float', int, float)
@@ -10,64 +11,7 @@ Int_or_Float = TypeVar('Int_or_Float', int, float)
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 
-class Path(list):
-
-    def __init__(self, nodes: List[graph.Node], starting_length: Int_or_Float = 0):
-        super(Path, self).__init__(nodes)
-        self.length = starting_length
-        self.enabled = True
-
-    def __str__(self):
-        sw = {True: '', False: ' (disabled)'}
-        path = ''
-        for node in self[1:-1]:
-            path += '{}, '.format(node.name)
-        return '<Path from {} over {}to {} ({}){}>'.format(
-            self[0].name, path, self[-1].name, self.weight, sw[self.enabled]
-        )
-
-    def __repr__(self):
-        sw = {True: '', False: '(disabled) '}
-        path = ''
-        for node in self[1:-1]:
-            path += '{}x{}, '.format(node.x, node.y)
-        return '<{}Path from {}x{} over {}to {}x{}>'.format(
-            sw[self.enabled], self[0].x, self[0].y, path, self[-1].x, self[-1].y)
-
-    def __add__(self, rhs):
-        """
-        :type rhs: Path
-        :rtype: Path
-        """
-        new_length = self.length + rhs.length
-        return Path(list.__add__(self, rhs), new_length)
-
-    def __getitem__(self, item: int) -> graph.Node or List[graph.Node]:
-        return list.__getitem__(self, item)
-
-    def appendNode(self, node: graph.Node, added_length: int or float):
-        self.length += added_length
-        super(Path, self).append(node)
-
-    @property
-    def weight(self):
-        value = self[-1].value
-        return value + self.length
-
-    @property
-    def last_node(self):
-        return self[-1]
-
-    @property
-    def start_node(self):
-        return self[0]
-
-    @property
-    def nodes_traveled(self):
-        return len(self)
-
-
-def aStar(work_graph: graph.Graph) -> Dict:
+def aStar(work_graph: Graph) -> Dict:
     """Searches for the shortest path from start to goal."""
     # Set current level to infinity and other counters
     # TODO: add more data to track
@@ -106,7 +50,7 @@ def aStar(work_graph: graph.Graph) -> Dict:
     return data_dict
 
 
-def _pathIterate(source_node: graph.Node, data_dict: Dict[str, Any]):
+def _pathIterate(source_node: Node, data_dict: Dict[str, Any]):
     """Searches through nodes and creates paths."""
     # 1) Frequently accessed data
     source_path_id = data_dict['source_path_id']
@@ -211,7 +155,7 @@ def goalNodeUpdate(new_path: Path, data_dict: Dict[str, Any]) -> Path:
 
 
 def sameNodeCompare(best_length: Int_or_Float, new_path: Path, path_id: int, active_paths: Dict[int, Path],
-                    linked_node: graph.Node) -> Int_or_Float:
+                    linked_node: Node) -> Int_or_Float:
     """Compare the path with the same ending node to the current shortest path to that node and pick the shorter."""
     path_length = active_paths[path_id].length
     if path_length > best_length:
@@ -241,7 +185,7 @@ def getPathsWeights(path: Path, active_paths: Dict[Path, Path]) -> Int_or_Float:
 
 if __name__ == '__main__':
     # work_graph = graph.testMap()
-    work_graph = graph.testMap2()
+    work_graph = testMap2()
     # print work_graph.getLinks(pos=graph.Pos(0, 0))
     data = aStar(work_graph)
     # start_pos = work_graph.start
