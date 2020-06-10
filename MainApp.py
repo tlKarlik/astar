@@ -246,12 +246,6 @@ class MainApp(ttk.Frame):
             )
             self.canvas.pack(fill=tk.BOTH, expand=tk.YES)
 
-        self.canvas.placeLinks()
-        self.canvas.placeNodes()
-        self.canvas.updateStartGoalNodes(new_start=self.graph.start, new_goal=self.graph.goal)
-        # self.canvas.addtag_all("all")
-        self.canvas.update()
-
         self.widgets['node_listbox'].configure(state='normal')
         self.widgets['node_listbox'].delete(0, tk.END)
         self.widgets['node_listbox'].insert(tk.END, *[node_name for node_name, node_pos in self.ordered_nodes])

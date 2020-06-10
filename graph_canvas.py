@@ -1,15 +1,17 @@
 import tkinter as tk
-from typing import Dict
+from typing import Dict, List, Sequence
 
 from graph import Pos, Graph, Node
-from path import Path
+
+
+# Path = TypeVar('Path', Iterable, Sized)
 
 
 class GraphCanvas(tk.Canvas):
     node_min_size: int
     pad: int
     graph: Graph
-    path: Path[Node]
+    path: Sequence[Node]
     link_lines: Dict[Pos, Dict[Pos, int]] = {}
     link_label_bgs: Dict[Pos, Dict[Pos, int]] = {}
     link_labels: Dict[Pos, Dict[Pos, int]] = {}
@@ -21,6 +23,12 @@ class GraphCanvas(tk.Canvas):
     selected_node_color = '#DDDDDD'
     node_outline_color = '#FFFFFF'
     selected_node_outline_color = '#AA1010'
+    default_outline_width = 2
+    default_link_width = 4
+    highlight_outline_width = 8
+
+    NODE = 'node'
+    LINK = 'link'
 
     def __init__(self, graph: Graph, node_min_size, pad, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -55,30 +63,53 @@ class GraphCanvas(tk.Canvas):
         self.scale("all", 0, 0, scale, scale)
         self.update()
 
-    def _reset(self, node: Pos):
-        # TODO: make use of a new unified node update method to reset nodes to the default look
-        pass
+    def _reset(self, target_type: str, **options):
+        if target_type == self.NODE:
+            self.itemconfig(
+                self.node_bgs[options['node_pos']],
+                outline=self.node_outline_color,
+                fill=self.node_color,
+                width=self.default_outline_width,
+                activeoutline=self.node_color
+            )
+        elif target_type == self.LINK:
+            try:
+                link_line_id = self.link_lines[options['link_start']][options['link_end']]
+            except KeyError:
+                link_line_id = self.link_lines[options['link_end']][options['link_start']]
+            weight = self.graph.links[options['link_start']][options['link_end']]
+            self.itemconfig(
+                link_line_id,
+                width=self.default_link_width,
+                fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2))
+            )
+
+    def _highlight(self, target_type: str, **options):
+        if target_type == self.NODE:
+            self.itemconfig(
+                self.node_bgs[options['node_pos']],
+                outline=self.selected_node_outline_color,
+                fill=self.selected_node_color,
+                width=self.highlight_outline_width,
+                activeoutline=self.selected_node_color
+            )
+        elif target_type == self.LINK:
+            try:
+                link_line_id = self.link_lines[options['link_start']][options['link_end']]
+            except KeyError:
+                link_line_id = self.link_lines[options['link_end']][options['link_start']]
+            self.itemconfig(
+                link_line_id,
+                fill=self.selected_node_outline_color,
+                width=self.highlight_outline_width
+            )
 
     def _updateNodes(self, new_node: Pos, old_node: Pos):
-        # TODO: make a unifying method for updating nodes (switcher?)
-        # node_ellipse_ids = self.find_withtag('node_ellipse')
         for node_ellipse_id in self.node_bgs.values():
             if repr(new_node).replace(' ', '') in self.gettags(node_ellipse_id):
-                self.itemconfig(
-                    node_ellipse_id,
-                    outline=self.selected_node_outline_color,
-                    fill=self.selected_node_color,
-                    width=8,
-                    activeoutline=self.selected_node_color
-                )
+                self._highlight(self.NODE, node_pos=new_node)
             elif repr(old_node).replace(' ', '') in self.gettags(node_ellipse_id):
-                self.itemconfig(
-                    node_ellipse_id,
-                    outline=self.node_outline_color,
-                    fill=self.node_color,
-                    width=2,
-                    activeoutline=self.node_color
-                )
+                self._reset(old_node)
 
     def placeLinks(self):
         self.link_lines.clear()
@@ -90,13 +121,13 @@ class GraphCanvas(tk.Canvas):
                     (2 * start_node_pos.y + 0.5) * self.node_size + self.pad,
                     (2 * end_node_pos.x + 0.5) * self.node_size + self.pad,
                     (2 * end_node_pos.y + 0.5) * self.node_size + self.pad,
-                    width=4,
+                    width=self.default_link_width,
                     fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2)),
                     tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'line')
                 )
                 try:
                     self.link_lines[start_node_pos][end_node_pos] = link_line_id
-                except AttributeError:
+                except KeyError:
                     self.link_lines[start_node_pos] = {end_node_pos: link_line_id}
 
         self.link_label_bgs.clear()
@@ -139,7 +170,7 @@ class GraphCanvas(tk.Canvas):
                 try:
                     self.link_label_bgs[start_node_pos][end_node_pos] = link_label_bg_id
                     self.link_labels[start_node_pos][end_node_pos] = link_label_id
-                except AttributeError:
+                except KeyError:
                     self.link_label_bgs[start_node_pos] = {end_node_pos: link_label_bg_id}
                     self.link_labels[start_node_pos] = {end_node_pos: link_label_id}
 
@@ -180,11 +211,17 @@ class GraphCanvas(tk.Canvas):
             self.node_labels[node_pos] = node_label_id
             self.node_values[node_pos] = node_value_id
 
-    def setBestPath(self, best_path: Path[Node]):
+    def setBestPath(self, best_path: Sequence[Node]):
         if self.path is not None:
             for node in self.path:
                 self._reset(node.pos)
-        # TODO: change the look of the path nodes
+        for i in range(len(best_path) - 1):
+            self._highlight(self.NODE, node_pos=best_path[i].pos)
+            self._highlight(self.LINK, link_start=best_path[i].pos, link_end=best_path[i + 1].pos)
+        for node in best_path:
+            self._highlight(node.pos)
+        self.path = best_path
+        self.update()
 
     def setGraph(self, new_graph: Graph):
         self.graph = new_graph
@@ -199,6 +236,23 @@ class GraphCanvas(tk.Canvas):
         self.width = (2 * self.graph.x_size - 1) * self.node_size + 2 * self.pad
         self.height = (2 * self.graph.y_size - 1) * self.node_size + 2 * self.pad
         self.configure(width=self.width, height=self.height)
+        self.placeLinks()
+        self.placeNodes()
+        self.updateStartGoalNodes(new_start=self.graph.start, new_goal=self.graph.goal)
+        self.update()
+
+    def updateNodes(self, node_positions: List[Pos], **options):
+        for option, value in options:
+            if option == 'start':
+                self._updateNodes(new_node=node_positions, old_node=self.graph.start)
+                self.graph.setStartNode(node_positions[0])
+            elif option == 'goal':
+                self._updateNodes(new_node=node_positions, old_node=self.graph.goal)
+                self.graph.setGoalNode(node_positions[0])
+                self.updateNodeValues()
+            elif option == 'reset':
+                for node_pos in node_positions:
+                    self._reset(self.node_bgs[node_pos])
 
     def updateNodeValues(self):
         for node_value_id in self.node_values.values():
