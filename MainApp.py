@@ -7,7 +7,7 @@ from typing import Dict
 # import graph
 import astar_search
 from graph import Node, Graph
-from GraphCanvas import GraphCanvas
+from graph_canvas import GraphCanvas
 from path import Path
 
 
@@ -267,7 +267,7 @@ class MainApp(ttk.Frame):
         self.output_text.config(state='disabled')
         self.output_text.update()
 
-        best_path: Path[Node] = data['best_path']
+        self.canvas.setBestPath(data['best_path'])
 
 
 
