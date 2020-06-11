@@ -19,13 +19,14 @@ class GraphCanvas(tk.Canvas):
     node_labels: Dict[Pos, int] = {}
     node_values: Dict[Pos, int] = {}
 
-    node_color = '#A0A0A0'
-    selected_node_color = '#DDDDDD'
-    node_outline_color = '#FFFFFF'
-    selected_node_outline_color = '#AA1010'
-    default_outline_width = 2
-    default_link_width = 4
-    highlight_outline_width = 8
+    node_color_default = '#A0A0A0'
+    node_color_selected = '#DDDDDD'
+    node_outline_color_default = '#FFFFFF'
+    node_outline_color_selected = '#AA1010'
+    outline_width_default = 2
+    outline_width_highlighted = 8
+    link_width_default = 4
+
 
     NODE = 'node'
     LINK = 'link'
@@ -64,13 +65,24 @@ class GraphCanvas(tk.Canvas):
         self.update()
 
     def _reset(self, target_type: str, **options):
+        other_options = {
+            option: options[option] for option in options if option not in (
+                'node_pos',
+                'link_start',
+                'link_end'
+            )
+        }
         if target_type == self.NODE:
+            node_options = {
+                'outline': self.node_outline_color_default,
+                'fill': self.node_color_default,
+                'width': self.outline_width_default,
+                'activeoutline': self.node_color_default,
+            }
+            node_options.update(other_options)
             self.itemconfig(
                 self.node_bgs[options['node_pos']],
-                outline=self.node_outline_color,
-                fill=self.node_color,
-                width=self.default_outline_width,
-                activeoutline=self.node_color
+                **node_options
             )
         elif target_type == self.LINK:
             try:
@@ -78,30 +90,53 @@ class GraphCanvas(tk.Canvas):
             except KeyError:
                 link_line_id = self.link_lines[options['link_end']][options['link_start']]
             weight = self.graph.links[options['link_start']][options['link_end']]
+            link_options = {
+                'width': self.link_width_default,
+                'fill': '#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2))
+            }
+            link_options.update(other_options)
             self.itemconfig(
                 link_line_id,
-                width=self.default_link_width,
-                fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2))
+                **link_options
             )
 
     def _highlight(self, target_type: str, **options):
+        other_options = {
+            option: options[option] for option in options if option not in (
+                'node_pos',
+                'link_start',
+                'link_end'
+            )
+        }
         if target_type == self.NODE:
+            node_options = {
+                'outline': self.node_outline_color_selected,
+                'fill': self.node_color_selected,
+                'width': self.outline_width_highlighted,
+                'activeoutline': self.node_color_selected
+            }
+            node_options.update(other_options)
             self.itemconfig(
                 self.node_bgs[options['node_pos']],
-                outline=self.selected_node_outline_color,
-                fill=self.selected_node_color,
-                width=self.highlight_outline_width,
-                activeoutline=self.selected_node_color
+                **node_options
+            )
+            self.itemconfig(
+                self.node_bgs[options['node_pos']],
+                **node_options
             )
         elif target_type == self.LINK:
             try:
                 link_line_id = self.link_lines[options['link_start']][options['link_end']]
             except KeyError:
                 link_line_id = self.link_lines[options['link_end']][options['link_start']]
+            link_options = {
+                'fill': self.node_outline_color_selected,
+                'width': self.outline_width_highlighted
+            }
+            link_options.update(other_options)
             self.itemconfig(
                 link_line_id,
-                fill=self.selected_node_outline_color,
-                width=self.highlight_outline_width
+                **link_options
             )
 
     def _updateNodes(self, new_node: Pos, old_node: Pos):
@@ -121,7 +156,7 @@ class GraphCanvas(tk.Canvas):
                     (2 * start_node_pos.y + 0.5) * self.node_size + self.pad,
                     (2 * end_node_pos.x + 0.5) * self.node_size + self.pad,
                     (2 * end_node_pos.y + 0.5) * self.node_size + self.pad,
-                    width=self.default_link_width,
+                    width=self.link_width_default,
                     fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2)),
                     tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'line')
                 )
@@ -155,7 +190,7 @@ class GraphCanvas(tk.Canvas):
                     link_xpos + 0.2 * self.node_size,
                     link_ypos + 0.2 * self.node_size,
                     fill='#FFAA{0}'.format(hex(255 - int(weight * 255 / 20))[2:4].zfill(2)),
-                    outline=self.node_outline_color,
+                    outline=self.node_outline_color_default,
                     width=2,
                     tags=(str(start_node_pos).replace(' ', ''), str(end_node_pos).replace(' ', ''), 'weightbg')
                 )
@@ -184,11 +219,11 @@ class GraphCanvas(tk.Canvas):
                 2 * node_pos.y * self.node_size + self.pad,
                 (2 * node_pos.x + 1) * self.node_size + self.pad,
                 (2 * node_pos.y + 1) * self.node_size + self.pad,
-                fill=self.node_color,
+                fill=self.node_color_default,
                 # outline='#22AA22',
-                outline=self.node_outline_color,
+                outline=self.node_outline_color_default,
                 width=2,
-                activeoutline=self.node_color,
+                activeoutline=self.node_color_default,
                 tags=(repr(node.pos).replace(' ', ''), 'node_ellipse')
             )
             node_label_id = self.create_text(
@@ -214,12 +249,12 @@ class GraphCanvas(tk.Canvas):
     def setBestPath(self, best_path: Sequence[Node]):
         if self.path is not None:
             for node in self.path:
-                self._reset(node.pos)
+                self._reset(self.NODE, node_pos=node.pos)
         for i in range(len(best_path) - 1):
-            self._highlight(self.NODE, node_pos=best_path[i].pos)
+            self._highlight(self.NODE, node_pos=best_path[i].pos, fill=self.node_color_default)
             self._highlight(self.LINK, link_start=best_path[i].pos, link_end=best_path[i + 1].pos)
-        for node in best_path:
-            self._highlight(node.pos)
+        # for node in best_path:
+        #     self._highlight(node.pos)
         self.path = best_path
         self.update()
 
@@ -266,10 +301,12 @@ class GraphCanvas(tk.Canvas):
 
     def updateStartGoalNodes(self, new_start: Pos = None, new_goal: Pos = None):
         if new_start is not None:
-            self._updateNodes(new_start, self.graph.start)
+            self._reset(self.NODE, node_pos=self.graph.start)
+            self._highlight(self.NODE, node_pos=new_start)
             self.graph.setStartNode(new_start)
         if new_goal is not None:
-            self._updateNodes(new_goal, self.graph.goal)
+            self._reset(self.NODE, node_pos=self.graph.goal)
+            self._highlight(self.NODE, node_pos=new_goal)
             self.graph.setGoalNode(new_goal)
             self.updateNodeValues()
 
