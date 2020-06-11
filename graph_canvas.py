@@ -110,8 +110,8 @@ class GraphCanvas(tk.Canvas):
         }
         if target_type == self.NODE:
             node_options = {
-                'outline': self.node_outline_color_selected,
-                'fill': self.node_color_selected,
+                # 'outline': self.node_outline_color_selected,
+                # 'fill': self.node_color_selected,
                 'width': self.outline_width_highlighted,
                 'activeoutline': self.node_color_selected
             }
@@ -248,10 +248,13 @@ class GraphCanvas(tk.Canvas):
 
     def setBestPath(self, best_path: Sequence[Node]):
         if self.path is not None:
-            for node in self.path:
-                self._reset(self.NODE, node_pos=node.pos)
-        for i in range(len(best_path) - 1):
-            self._highlight(self.NODE, node_pos=best_path[i].pos, fill=self.node_color_default)
+            self._reset(self.LINK, link_start=self.path[0].pos, link_end=self.path[1].pos)
+            for i in range(1, len(self.path) - 1):
+                self._reset(self.NODE, node_pos=self.path[i].pos)
+                self._reset(self.LINK, link_start=self.path[i].pos, link_end=self.path[i + 1].pos)
+        self._highlight(self.LINK, link_start=best_path[0].pos, link_end=best_path[1].pos)
+        for i in range(1, len(best_path) - 1):
+            self._highlight(self.NODE, node_pos=best_path[i].pos, outline=self.node_outline_color_selected)
             self._highlight(self.LINK, link_start=best_path[i].pos, link_end=best_path[i + 1].pos)
         # for node in best_path:
         #     self._highlight(node.pos)
@@ -302,11 +305,21 @@ class GraphCanvas(tk.Canvas):
     def updateStartGoalNodes(self, new_start: Pos = None, new_goal: Pos = None):
         if new_start is not None:
             self._reset(self.NODE, node_pos=self.graph.start)
-            self._highlight(self.NODE, node_pos=new_start)
+            self._highlight(
+                self.NODE,
+                node_pos=new_start,
+                outline=self.node_outline_color_selected,
+                fill=self.node_color_selected
+            )
             self.graph.setStartNode(new_start)
         if new_goal is not None:
             self._reset(self.NODE, node_pos=self.graph.goal)
-            self._highlight(self.NODE, node_pos=new_goal)
+            self._highlight(
+                self.NODE,
+                node_pos=new_goal,
+                outline=self.node_outline_color_selected,
+                fill=self.node_color_selected
+            )
             self.graph.setGoalNode(new_goal)
             self.updateNodeValues()
 
