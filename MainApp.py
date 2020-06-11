@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.font as tkf
 from tkinter import ttk
 from tkinter import messagebox
 import logging as log
@@ -97,23 +98,33 @@ class MainApp(ttk.Frame):
             font=('Courier', 10),
             wrap=tk.NONE,
             foreground='#BB0000',
-            state='disabled'
+            state='disabled',
+            width=1,
+            height=1
         )
+        letter_width = tkf.Font(font=self.output_text['font']).measure('0')
+        letter_height = tkf.Font(font=self.output_text['font']).metrics('linespace')
+        # self.output_text.configure(width=int(300/letter_width), height=int(1000/letter_height))
         self.widgets['output_text'] = self.output_text
-        self.output_text.grid(row=0, column=0, sticky='EWNS')
+        # self.output_text.grid(row=0, column=0, sticky='EWNS')
+        self.output_text.pack(fill=tk.BOTH, expand=True)
 
         self.find_path_button = tk.Button(
             self.pathfinding_frame,
             text='Find Path!',
-            command=self._findPath
+            command=self._findPathCallback
         )
         self.widgets['find_path_button'] = self.find_path_button
-        self.find_path_button.grid(row=10, column=0)
+        # self.find_path_button.grid(row=10, column=0)
+        self.find_path_button.pack(side=tk.BOTTOM, padx=self.pad, pady=self.pad)
 
-    def _findPath(self):
-        data = astar_search.aStar(self.graph)
-        with open('output/search.info', 'r') as search_info_file:
-            search_info = search_info_file.read()
+    def _findPathCallback(self):
+        try:
+            data = astar_search.aStar(self.graph)
+        except AttributeError:
+            messagebox.showwarning('Warning', 'Please, generate a graph first.')
+            return
+        search_info = ''.join(map(lambda el: el + '\n', data['output_data']))
         print(search_info)
         self.output_text.config(state='normal')
         self.output_text.delete(1.0, tk.END)
@@ -122,6 +133,9 @@ class MainApp(ttk.Frame):
         self.output_text.update()
 
         self.canvas.setBestPath(data['best_path'])
+
+        with open('output/last_search.info', 'w') as search_info_file:
+            search_info_file.writelines(search_info)
 
     def _generateGraphCallback(self):
         # self.graph = graph.testMap()
@@ -162,29 +176,33 @@ class MainApp(ttk.Frame):
             self.settings_frame,
             text='Graph width in # nodes:'
         )
-        self.graph_xsize_label.grid(row=0, column=0)
+        self.graph_xsize_label.grid(row=0, column=0, padx=self.pad, pady=self.pad)
         self.graph_ysize_label = tk.Label(
             self.settings_frame,
             text='Graph height in # nodes:'
         )
-        self.graph_ysize_label.grid(row=0, column=1)
+        self.graph_ysize_label.grid(row=0, column=1, padx=self.pad, pady=self.pad)
         self.graph_xsize_control = ttk.Combobox(
             self.settings_frame,
             values=list(range(2, 11))
         )
         self.graph_xsize_control.current(0)
         self.widgets['xsize_combobox'] = self.graph_xsize_control
-        self.graph_xsize_control.grid(row=1, column=0)
+        self.graph_xsize_control.grid(row=1, column=0, padx=self.pad, pady=self.pad)
         self.graph_ysize_control = ttk.Combobox(
             self.settings_frame,
             values=list(range(2, 11))
         )
         self.graph_ysize_control.current(0)
         self.widgets['ysize_combobox'] = self.graph_ysize_control
-        self.graph_ysize_control.grid(row=1, column=1)
+        self.graph_ysize_control.grid(row=1, column=1, padx=self.pad, pady=self.pad)
 
     def _setNodeCallback(self, node_type: str):
-        selection = int(self.widgets['node_listbox'].curselection()[0])
+        try:
+            selection = int(self.widgets['node_listbox'].curselection()[0])
+        except IndexError:
+            messagebox.showwarning('Warning', 'Please, select a node from the list')
+            return
         node_pos = self.ordered_nodes[selection][1]
         if node_pos == self.graph.start or node_pos == self.graph.goal:
             messagebox.showwarning('Warning', 'Node already selected as start or goal. Please, pick another node.')
@@ -201,7 +219,7 @@ class MainApp(ttk.Frame):
             self.settings_frame,
             text='Select start and end nodes:'
         )
-        self.start_node_label.grid(row=2, column=0, columnspan=2)
+        self.start_node_label.grid(row=2, column=0, columnspan=2, padx=self.pad, pady=self.pad)
 
         node_select = tk.Listbox(
             self.settings_frame,
@@ -209,7 +227,7 @@ class MainApp(ttk.Frame):
             state='disabled'
         )
         self.widgets['node_listbox'] = node_select
-        node_select.grid(row=3, column=0, columnspan=2)
+        node_select.grid(row=3, column=0, columnspan=2, padx=self.pad, pady=self.pad)
 
         start_node_button = tk.Button(
             self.settings_frame,
@@ -217,7 +235,7 @@ class MainApp(ttk.Frame):
             command=lambda: self._setNodeCallback('start')
         )
         self.widgets['start_node_button'] = start_node_button
-        start_node_button.grid(row=4, column=0, sticky='E')
+        start_node_button.grid(row=4, column=0, sticky='E', padx=self.pad, pady=self.pad)
 
         goal_node_button = tk.Button(
             self.settings_frame,
@@ -225,7 +243,7 @@ class MainApp(ttk.Frame):
             command=lambda: self._setNodeCallback('goal')
         )
         self.widgets['goal_node_button'] = goal_node_button
-        goal_node_button.grid(row=4, column=1, sticky='W')
+        goal_node_button.grid(row=4, column=1, sticky='W', padx=self.pad, pady=self.pad)
 
     def bindings(self):
         """Sets key bindings for the app."""

@@ -1,18 +1,17 @@
 import logging
 from typing import TypeVar, Dict, Any
 
-from graph import Graph, Node, testMap, testMap2
+from graph import Graph, Node, testMap2
 from path import Path
-
 
 Int_or_Float = TypeVar('Int_or_Float', int, float)
 
-
 logging.basicConfig(
-    filename='output/search.info',
+    filename='output/logging.info',
     filemode='w',
     level=logging.INFO,
-    format='%(message)s'
+    format='%(asctime)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
 
 
@@ -26,7 +25,8 @@ def aStar(work_graph: Graph) -> Dict:
         'work_graph': work_graph,
         'active_paths': active_paths,
         'best_path': Path([], float('inf')),
-        'iterations_counter': 0
+        'iterations_counter': 0,
+        'output_data': []
     }
 
     # Get the updated path
@@ -38,15 +38,22 @@ def aStar(work_graph: Graph) -> Dict:
     # Run the iterator
     while node_to_expand is not None:
         data_dict['iterations_counter'] += 1
-        logging.info("----------------------------------------------")
+        data_dict['output_data'].append("----------------------------------------------")
         logging.info("ITERATION {}".format(data_dict['iterations_counter']))
+        data_dict['output_data'].append("ITERATION {}".format(data_dict['iterations_counter']))
         node_to_expand = _pathIterate(node_to_expand, data_dict)
 
-    logging.info("")
+    data_dict['output_data'].append("")
     logging.info("The path-finding was successfully completed")
-    logging.info("----------------------------------------------")
-    logging.info("")
+    data_dict['output_data'].append("The path-finding was successfully completed")
+    data_dict['output_data'].append("----------------------------------------------")
+    data_dict['output_data'].append("")
     logging.info("The fastest path from {} to {} is through the {}".format(
+        work_graph.nodes[work_graph.start],
+        work_graph.nodes[work_graph.goal],
+        data_dict['best_path']
+    ))
+    data_dict['output_data'].append("The fastest path from {} to {} is through the {}".format(
         work_graph.nodes[work_graph.start],
         work_graph.nodes[work_graph.goal],
         data_dict['best_path']
@@ -61,11 +68,12 @@ def _pathIterate(source_node: Node, data_dict: Dict[str, Any]):
     source_path_id = data_dict['source_path_id']
     work_graph = data_dict['work_graph']
     active_paths = data_dict['active_paths']
+    output_data = data_dict['output_data']
 
-    logging.info('There are currently {} active paths'.format(
+    output_data.append('There are currently {} active paths'.format(
         len([path for path in active_paths if active_paths[path].enabled])))
-    logging.info('The current tested path is {}'.format(active_paths[source_path_id]))
-    logging.info("Coming from {}".format(source_node))
+    output_data.append('The current tested path is {}'.format(active_paths[source_path_id]))
+    output_data.append("Coming from {}".format(source_node))
 
     # 2) Get all links from source node
     links = work_graph.getLinks(source_node.pos)
@@ -74,11 +82,11 @@ def _pathIterate(source_node: Node, data_dict: Dict[str, Any]):
         linked_node_pos = link
         link_length = links[link]
         linked_node = work_graph.getNode(linked_node_pos)
-        logging.info('    Now testing a link to {} of length {}'.format(linked_node, link_length))
+        output_data.append('    Now testing a link to {} of length {}'.format(linked_node, link_length))
 
         # B) If the linked node has already been visited in this path, skip this link and continue with the next
         if linked_node in active_paths[source_path_id]:
-            logging.info("        but it has already been visited in this path and thus will be skipped")
+            output_data.append("        but it has already been visited in this path and thus will be skipped")
             continue
 
         # C) Get the complete path from start to the linked node and its weight
@@ -87,8 +95,8 @@ def _pathIterate(source_node: Node, data_dict: Dict[str, Any]):
         # D) If the new path's length matches or exceeds the length of the current best path to the goal, skip this link
         new_best_length = data_dict['best_path'].length
         if new_path.length >= new_best_length:
-            logging.info("        This path's length is longer than the best path to the goal ({} >= {}) and it"
-                         " will be skipped".format(new_path.length, new_best_length))
+            output_data.append("        This path's length is longer than the best path to the goal ({} >= {}) and it"
+                               " will be skipped".format(new_path.length, new_best_length))
             continue
 
         # E) If the linked node is the goal node, update it (the path will always be shorter than  the current best
@@ -103,15 +111,15 @@ def _pathIterate(source_node: Node, data_dict: Dict[str, Any]):
         best_length = new_path.length
         for path_id in [path_id for path_id in active_paths if active_paths[path_id].last_node == linked_node]:
             # Iterate over the all paths, which have the same ending node as the new path, i.e. the linked node
-            best_length = sameNodeCompare(best_length, new_path, path_id, active_paths, linked_node)
+            best_length = sameNodeCompare(best_length, new_path, path_id, active_paths, linked_node, data_dict)
 
         # G) Finally, add the new path to active paths
         index = len(active_paths)
         active_paths[index] = new_path
-        logging.info("        {} has been added to the active paths".format(new_path))
+        output_data.append("        {} has been added to the active paths".format(new_path))
 
     # 3) Disable the fully expanded path
-    logging.info("{} has been fully expanded and thus it has been disabled".format(
+    output_data.append("{} has been fully expanded and thus it has been disabled".format(
         active_paths[source_path_id]))
     active_paths[source_path_id].enabled = False
 
@@ -127,9 +135,9 @@ def _pathIterate(source_node: Node, data_dict: Dict[str, Any]):
         # Return None instead of next node to signal the iteration to stop.
         return None
     try:
-        logging.info("The current best path to the goal is {}".format(data_dict['best_path']))
+        output_data.append("The current best path to the goal is {}".format(data_dict['best_path']))
     except IndexError:
-        logging.info("There is no known path to the goal")
+        output_data.append("There is no known path to the goal")
     next_node_to_expand = active_paths[best_weighted_path_id].last_node
     data_dict['source_path_id'] = best_weighted_path_id
 
@@ -140,7 +148,7 @@ def _pathIterate(source_node: Node, data_dict: Dict[str, Any]):
 
 def goalNodeUpdate(new_path: Path, data_dict: Dict[str, Any]) -> Path:
     """Update the best goal path and disable all active paths that are longer than the new best goal path."""
-    logging.info("        AND IT IS THE GOAL!")
+    data_dict['output_data'].append("        AND IT IS THE GOAL!")
     active_paths = data_dict['active_paths']
     # Update the best goal path
     data_dict['best_path'] = new_path
@@ -149,27 +157,28 @@ def goalNodeUpdate(new_path: Path, data_dict: Dict[str, Any]) -> Path:
     for path_id in [path_id for path_id in active_paths if active_paths[path_id].enabled]:
         path_length = active_paths[path_id].length
         if path_length > new_best_length:
-            logging.info("        {} has been disabled because it's longer than the new"
-                         " best path to the goal ({} > {})".format(active_paths[path_id], path_length, new_best_length))
+            data_dict['output_data'].appendinfo("        {} has been disabled because it's longer than the new"
+                                                " best path to the goal ({} > {})".format(active_paths[path_id],
+                                                                                          path_length, new_best_length))
             active_paths[path_id].enabled = False
     # Disable the new goal path to avoid expanding it in future iterations
-    logging.info("        the new path to the goal has been disabled to avoid "
-                 "expanding it in future iterations")
+    data_dict['output_data'].append("        the new path to the goal has been disabled to avoid "
+                                    "expanding it in future iterations")
     new_path.enabled = False
     return new_path
 
 
 def sameNodeCompare(best_length: Int_or_Float, new_path: Path, path_id: int, active_paths: Dict[int, Path],
-                    linked_node: Node) -> Int_or_Float:
+                    linked_node: Node, data_dict: Dict) -> Int_or_Float:
     """Compare the path with the same ending node to the current shortest path to that node and pick the shorter."""
     path_length = active_paths[path_id].length
     if path_length > best_length:
-        logging.info("        {} has been disabled because this path gets to "
-                     "the {} node faster".format(active_paths[path_id], linked_node.name))
+        data_dict['output_data'].append("        {} has been disabled because this path gets to "
+                                        "the {} node faster".format(active_paths[path_id], linked_node.name))
         active_paths[path_id].enabled = False
     else:
-        logging.info("        this path has been disabled because {} gets to "
-                     "the {} node faster".format(active_paths[path_id], linked_node.name))
+        data_dict['output_data'].append("        this path has been disabled because {} gets to "
+                                        "the {} node faster".format(active_paths[path_id], linked_node.name))
         new_path.enabled = False
         best_length = path_length
     return best_length
@@ -187,7 +196,6 @@ def getPathsWeights(path: Path, active_paths: Dict[Path, Path]) -> Int_or_Float:
     return active_paths[path].weight
 '''
 
-
 if __name__ == '__main__':
     # work_graph = graph.testMap()
     work_graph = testMap2()
@@ -197,5 +205,3 @@ if __name__ == '__main__':
     # start_node = work_graph.nodes[start_pos]
     # test_path = Path([start_node])
     # print test_path
-
-
