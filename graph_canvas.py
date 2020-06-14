@@ -27,7 +27,6 @@ class GraphCanvas(tk.Canvas):
     outline_width_highlighted = 8
     link_width_default = 4
 
-
     NODE = 'node'
     LINK = 'link'
 
@@ -77,7 +76,7 @@ class GraphCanvas(tk.Canvas):
                 'outline': self.node_outline_color_default,
                 'fill': self.node_color_default,
                 'width': self.outline_width_default,
-                'activeoutline': self.node_color_default,
+                'activeoutline': self.node_outline_color_default,
             }
             node_options.update(other_options)
             self.itemconfig(
@@ -220,10 +219,8 @@ class GraphCanvas(tk.Canvas):
                 (2 * node_pos.x + 1) * self.node_size + self.pad,
                 (2 * node_pos.y + 1) * self.node_size + self.pad,
                 fill=self.node_color_default,
-                # outline='#22AA22',
                 outline=self.node_outline_color_default,
                 width=2,
-                activeoutline=self.node_color_default,
                 tags=(repr(node.pos).replace(' ', ''), 'node_ellipse')
             )
             node_label_id = self.create_text(
@@ -247,19 +244,21 @@ class GraphCanvas(tk.Canvas):
             self.node_values[node_pos] = node_value_id
 
     def setBestPath(self, best_path: Sequence[Node]):
+        self._resetPath()
+        self._highlight(self.LINK, link_start=best_path[0].pos, link_end=best_path[1].pos)
+        for i in range(1, len(best_path) - 1):
+            self._highlight(self.NODE, node_pos=best_path[i].pos, outline=self.node_outline_color_selected,
+                            activeoutline=self.node_outline_color_selected, )
+            self._highlight(self.LINK, link_start=best_path[i].pos, link_end=best_path[i + 1].pos)
+        self.path = best_path
+        self.update()
+
+    def _resetPath(self):
         if self.path is not None:
             self._reset(self.LINK, link_start=self.path[0].pos, link_end=self.path[1].pos)
             for i in range(1, len(self.path) - 1):
                 self._reset(self.NODE, node_pos=self.path[i].pos)
                 self._reset(self.LINK, link_start=self.path[i].pos, link_end=self.path[i + 1].pos)
-        self._highlight(self.LINK, link_start=best_path[0].pos, link_end=best_path[1].pos)
-        for i in range(1, len(best_path) - 1):
-            self._highlight(self.NODE, node_pos=best_path[i].pos, outline=self.node_outline_color_selected)
-            self._highlight(self.LINK, link_start=best_path[i].pos, link_end=best_path[i + 1].pos)
-        # for node in best_path:
-        #     self._highlight(node.pos)
-        self.path = best_path
-        self.update()
 
     def setGraph(self, new_graph: Graph):
         self.graph = new_graph
@@ -279,18 +278,18 @@ class GraphCanvas(tk.Canvas):
         self.updateStartGoalNodes(new_start=self.graph.start, new_goal=self.graph.goal)
         self.update()
 
-    def updateNodes(self, node_positions: List[Pos], **options):
-        for option, value in options:
-            if option == 'start':
-                self._updateNodes(new_node=node_positions, old_node=self.graph.start)
-                self.graph.setStartNode(node_positions[0])
-            elif option == 'goal':
-                self._updateNodes(new_node=node_positions, old_node=self.graph.goal)
-                self.graph.setGoalNode(node_positions[0])
-                self.updateNodeValues()
-            elif option == 'reset':
-                for node_pos in node_positions:
-                    self._reset(self.node_bgs[node_pos])
+    # def updateNodes(self, node_positions: List[Pos], **options):
+    #     for option, value in options:
+    #         if option == 'start':
+    #             self._updateNodes(new_node=node_positions, old_node=self.graph.start)
+    #             self.graph.setStartNode(node_positions[0])
+    #         elif option == 'goal':
+    #             self._updateNodes(new_node=node_positions, old_node=self.graph.goal)
+    #             self.graph.setGoalNode(node_positions[0])
+    #             self.updateNodeValues()
+    #         elif option == 'reset':
+    #             for node_pos in node_positions:
+    #                 self._reset(self.node_bgs[node_pos])
 
     def updateNodeValues(self):
         for node_value_id in self.node_values.values():
@@ -300,15 +299,16 @@ class GraphCanvas(tk.Canvas):
             else:
                 pos_tag = tags[0]
             self.itemconfig(node_value_id, text='({})'.format(self.graph.nodes[eval(pos_tag)].value))
-        self.update()
 
     def updateStartGoalNodes(self, new_start: Pos = None, new_goal: Pos = None):
+        self._resetPath()
         if new_start is not None:
             self._reset(self.NODE, node_pos=self.graph.start)
             self._highlight(
                 self.NODE,
                 node_pos=new_start,
                 outline=self.node_outline_color_selected,
+                activeoutline=self.node_outline_color_selected,
                 fill=self.node_color_selected
             )
             self.graph.setStartNode(new_start)
@@ -318,8 +318,9 @@ class GraphCanvas(tk.Canvas):
                 self.NODE,
                 node_pos=new_goal,
                 outline=self.node_outline_color_selected,
+                activeoutline=self.node_outline_color_selected,
                 fill=self.node_color_selected
             )
             self.graph.setGoalNode(new_goal)
             self.updateNodeValues()
-
+        self.update()

@@ -61,10 +61,9 @@ class MainApp(ttk.Frame):
         self.tab_control = ttk.Notebook(self)
         self.settings_frame = ttk.Frame(self.tab_control)
         self.settings_frame.pack(fill=tk.BOTH, expand=True)
-        self.pathfinding_frame = ttk.Frame(self.tab_control, style='test.TFrame')
-        # self.pathfinding_frame.pack(fill=tk.BOTH, expand=True)
+        self.pathfinding_frame = ttk.Frame(self.tab_control)
         self.tab_control.add(self.settings_frame, text='Settings')
-        self.tab_control.add(self.pathfinding_frame, text='Pathfinding')
+        self.tab_control.add(self.pathfinding_frame, text='Steps Output')
         self.tab_control.grid(row=0, column=1, sticky='EWNS', ipadx=self.pad, ipady=self.pad)
 
         self.grid_columnconfigure(0, weight=1)
@@ -102,9 +101,6 @@ class MainApp(ttk.Frame):
             width=1,
             height=1
         )
-        letter_width = tkf.Font(font=self.output_text['font']).measure('0')
-        letter_height = tkf.Font(font=self.output_text['font']).metrics('linespace')
-        # self.output_text.configure(width=int(300/letter_width), height=int(1000/letter_height))
         self.widgets['output_text'] = self.output_text
         # self.output_text.grid(row=0, column=0, sticky='EWNS')
         self.output_text.pack(fill=tk.BOTH, expand=True)
@@ -120,10 +116,11 @@ class MainApp(ttk.Frame):
 
     def _findPathCallback(self):
         try:
-            data = astar_search.aStar(self.graph)
+            gp = self.graph
         except AttributeError:
             messagebox.showwarning('Warning', 'Please, generate a graph first.')
             return
+        data = astar_search.aStar(gp)
         search_info = ''.join(map(lambda el: el + '\n', data['output_data']))
         print(search_info)
         self.output_text.config(state='normal')
