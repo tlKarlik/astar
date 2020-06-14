@@ -5,7 +5,7 @@ from collections import namedtuple
 from typing import Dict, Tuple
 
 
-Pos = namedtuple('Position', 'x y')
+Pos = namedtuple('Pos', 'x y')
 
 
 class Node(object):
@@ -28,7 +28,7 @@ class Graph(object):
     start: Tuple[int] or None
     goal: Tuple[int] or None
     nodes: Dict[Pos, Node]
-    links: Dict[Pos, Dict[Pos, float]]
+    links: Dict[Pos, Dict[Pos, int]]
     links_without_duplicates: Dict[Pos, Dict[Pos, float]]
 
     def __init__(self, x_size: int, y_size: int, start: Tuple[int] = None, goal: Tuple[int] = None) -> None:
@@ -139,7 +139,7 @@ class Graph(object):
                     self.links[node_pos][low_left_node_pos] = length
                     self.links[low_left_node_pos][node_pos] = length
 
-    def getLinks(self, *args, **kwargs):
+    def getLinks(self, *args, **kwargs) -> Dict[Pos, int]:
         """Returns all links of a node specified by its location (e.g. (x=1, y=2) or just (1, 2)).
 
         :rtype: dict
@@ -147,15 +147,12 @@ class Graph(object):
         pos = self._getPos(*args, **kwargs)
         return self.links[pos]
 
-    def getNode(self, *args, **kwargs):
-        """Returns a node specified by its location (e.g. (x=1, y=2) or just (1, 2)).
-
-        :rtype: Node
-        """
+    def getNode(self, *args, **kwargs) -> Node:
+        """Returns a node specified by its location (e.g. (x=1, y=2) or just (1, 2))."""
         pos = self._getPos(*args, **kwargs)
         return self.nodes[pos]
 
-    def _getPos(self, *args, **kwargs):
+    def _getPos(self, *args, **kwargs) -> Pos:
         try:
             pos = Pos(args[0], args[1])
         except IndexError:
@@ -168,211 +165,17 @@ class Graph(object):
                     pos = kwargs['pos']
         return pos
 
-    def printLinks(self):
-        for node in sorted(self.nodes.keys()):
-            print('-----------------------')
-            print("{}:".format(str(self.nodes[node])))
-            links = sorted(self.links[node].keys())
-            for link in links:
-                print("links to {} with a length of {}".format(link, self.links[node][link]))
+    def setStartNode(self, node_pos: Pos):
+        self.start = node_pos
 
-    def export(self, filename):
-        """Exports this graphs into a noteblock in an ASCII visual represantation.
+    def setGoalNode(self, node_pos: Pos):
+        self.goal = node_pos
+        self._updateNodeValues()
 
-        :type filename: str
-        """
-        top = '_'
-        side = '|'
-        diag_right = '\\'
-        dial_left = '/'
-        space = ' '
-        with open(filename, 'w') as f:
-            # f.write(' ___         ___         ___\n')
-            lines = {}
-            top_line = ' ___'
-            node_line = '| {} |'
-            # Build individual lines
-            for y in range(self.y_size):
-                # Build list of link lengths in this line (defined by y position), if the link doesn't exist, it's None
-                hor_links_list = []
-                ver_links_list = []
-                nodes_list = []
-                for x in range(self.x_size):
-                    links = self.links[Pos(x, y)]
-                    append_hor_none = False
-                    append_ver_none = False
-                    for link in links:
-                        if link.x < x or link.y < y:
-                            append_hor_none = True
-                            append_ver_none = True
-                            continue
-                        elif link.y > y:
-                            ver_links_list.append(links[link])
-                            append_hor_none = True
-                        else:
-                            hor_links_list.append(links[link])
-                            append_ver_none = True
-                    if append_hor_none:
-                        hor_links_list.append(None)
-                    if append_ver_none:
-                        ver_links_list.append(None)
-
-                    nodes_list.append(self.nodes[Pos(x, y)].value)
-                del hor_links_list[-1]
-                del hor_links_list[-1]
-                # print final_value_list
-                print(hor_links_list)
-                print(ver_links_list)
-                print(nodes_list)
-                final_value_list = [None] * (len(hor_links_list) + len(nodes_list))
-                node_index = 0
-                link_index = 0
-                for i in range(len(final_value_list)):
-                    mod = i % 2
-                    if mod == 0:
-                        final_value_list[i] = str(nodes_list[node_index]).rjust(1)
-                        node_index += 1
-                    else:
-                        final_value_list[i] = str(hor_links_list[link_index]).rjust(2)
-                        link_index += 1
-
-
-                print('{} --{}--- {} --{}--- {}'.format(*final_value_list))
-                # top_line += '         ___'
-                # node_line += '--{}---| {} |'
-
-    def export2(self, filename):
-        logging.info("Exporting graph...")
-        f = open(filename, 'w')
-        row0 = ' _____'
-        for x in range(self.x_size):
-            row0 += '         _____'
-            f.write(row0)
+    def _updateNodeValues(self):
         for y in range(self.y_size):
-            nodes_list = []
-            hor_links_list = [None] * (self.x_size - 1)
-            ver_links_list = [None] * self.x_size
-            diag_links_list = [None] * ((self.x_size - 1) * 2)
             for x in range(self.x_size):
-                nodes_list.append(self.nodes[Pos(x, y)].value)
-                links = self.links[Pos(x, y)]
-                for link in links:
-                    if link.x > x and link.y == y:
-                        hor_links_list[x] = links[link]
-                    elif link.x == x and link.y > y:
-                        ver_links_list[x] = links[link]
-                    elif link.y > y:
-                        index = link.x + x - (link.x - x + 1) / 2
-                        if link.x > x:
-                            diag_links_list[index] = links[link]
-                        else:
-                            diag_links_list[index] = links[link]
-
-            # 1) Row 0: Nodes and horizontal links row
-            hor_row_list = [' '] * (len(nodes_list) + len(hor_links_list))
-            row1 = ''
-            node_index = 0
-            hor_link_index = 0
-            for i in range(len(nodes_list) + len(hor_links_list)):
-                if i % 2 == 0:
-                    hor_row_list[i] = str(nodes_list[node_index]).rjust(2).ljust(3) #\
-                        # if nodes_list[node_index] is not None else ' '
-                    row1 += '|_{}_|'
-                    node_index += 1
-                else:
-                    hor_row_list[i] = str(hor_links_list[hor_link_index]).rjust(2, '-') \
-                        if hor_links_list[hor_link_index] is not None else ''
-                    if hor_row_list[i] == '':
-                        row1 += '   {}    '
-                    else:
-                        row1 += '--{}---'
-                    hor_link_index += 1
-            print(row1.format(*hor_row_list))
-
-            # 2) Upper and lower diagonal links row
-            upper_mid_ver_row = ['  '] * len(diag_links_list)
-            lower_mid_ver_row = ['  '] * len(diag_links_list)
-            row3 = '   '
-            for i in range(0, len(diag_links_list), 2):
-                if all(diag_links_list[i:i + 2]):
-                    upper_mid_ver_row[i] = str(diag_links_list[i]).rjust(2)
-                    upper_mid_ver_row[i + 1] = str(diag_links_list[i + 1]).rjust(2)
-                    lower_mid_ver_row[i + 1] = str(diag_links_list[i]).rjust(2)
-                    lower_mid_ver_row[i] = str(diag_links_list[i + 1]).rjust(2)
-                    continue
-                if diag_links_list[i] is not None:
-                    upper_mid_ver_row[i] = ' \\'
-                    lower_mid_ver_row[i + 1] = '\\ '
-                elif diag_links_list[i + 1] is not None:
-                    upper_mid_ver_row[i + 1] = ' /'
-                    lower_mid_ver_row[i] = '/ '
-
-            # 3)
-            upper_high_ver_row = [' '] * (len(diag_links_list) + len(ver_links_list))
-            lower_high_ver_row = [' '] * (len(diag_links_list) + len(ver_links_list))
-            row2 = ''
-            row4 = ''
-            ver_index = 0
-            diag_index = 0
-            for i in range(len(ver_links_list) + len(diag_links_list)):
-                if i % 3 == 0:
-                    item = switcher_ver(ver_index, ver_links_list)
-                    upper_high_ver_row[i] = item
-                    lower_high_ver_row[i] = item
-                    if item == '':
-                        row2 += '    '
-                    else:
-                        row2 += '|   '
-                    ver_index += 1
-                else:
-                    upper, lower = diagLinksPair2(diag_index, diag_links_list)
-                    upper_high_ver_row[i] = upper
-                    lower_high_ver_row[i] = lower
-
-                    diag_index += 1
-
-            # 3) Vertical links row
-            ver_row_list = []
-            ver_link_index = 0
-            diag_link_index = 0
-            for i in range(len(nodes_list) + len(ver_links_list) - 1):
-                if i % 2 == 0:
-                    ver_row_list.append(str(ver_links_list[ver_link_index]).rjust(2)
-                                        if ver_links_list[ver_link_index] is not None else '  ')
-                    ver_link_index += 1
-                else:
-                    ver_row_list.append(diagLinksPair(diag_link_index, diag_links_list))
-                    diag_link_index += 2
-
-            # 4)
-            print(hor_row_list)
-            print(upper_high_ver_row)
-            print(upper_mid_ver_row)
-            print(upper_high_ver_row)
-            print(ver_row_list)
-            print(lower_high_ver_row)
-            print(lower_mid_ver_row)
-            print(lower_high_ver_row)
-
-
-
-            hor_text = ""
-            for i in range(len(hor_row_list)):
-                if i % 2 == 0:
-                    hor_text += "|_{}_|"
-                else:
-                    if hor_row_list[i] is None:
-                        hor_text += "       "
-                    else:
-                        hor_text += "--{}---"
-            # print hor_text
-            ver_text = "  "
-            for i in range(len(ver_links_list)):
-                if ver_links_list[i] is None:
-                    ver_text += "              "
-                else:
-                    ver_text += "{}"
-        f.close()
+                self.nodes[Pos(x, y)].value = (x - self.goal.x) ** 2 + (y - self.goal.y) ** 2
 
 
 def switcher_ver(index, lst):
