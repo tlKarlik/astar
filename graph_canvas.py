@@ -18,6 +18,8 @@ class GraphCanvas(tk.Canvas):
     node_bgs: Dict[Pos, int] = {}
     node_labels: Dict[Pos, int] = {}
     node_values: Dict[Pos, int] = {}
+    start_index_id: int
+    goal_text_id: int
 
     node_color_default = '#A0A0A0'
     node_color_selected = '#DDDDDD'
@@ -41,6 +43,8 @@ class GraphCanvas(tk.Canvas):
         self.width = None
         self.height = None
         self.path = None
+        self.start_text_id = 0
+        self.goal_text_id = 0
         self.setGraph(graph)
 
     def _onResize(self, event):
@@ -61,6 +65,7 @@ class GraphCanvas(tk.Canvas):
         self.width, self.height = new_width, new_height
         self.config(width=self.width, height=self.height)
         self.scale("all", 0, 0, scale, scale)
+        self.node_size *= scale
         self.update()
 
     def _reset(self, target_type: str, **options):
@@ -224,16 +229,16 @@ class GraphCanvas(tk.Canvas):
                 tags=(repr(node.pos).replace(' ', ''), 'node_ellipse')
             )
             node_label_id = self.create_text(
-                (2 * node_pos.x + 0.5) * self.node_size + self.pad,
-                (2 * node_pos.y + 0.5) * self.node_size + self.pad + 3,
+                int((2 * node_pos.x + 0.5) * self.node_size + self.pad),
+                int((2 * node_pos.y + 0.5) * self.node_size + self.pad),
                 justify=tk.RIGHT,
                 text=node.name,
                 font=('Arial', 18),
                 tags=(node.name, 'node_label')
             )
             node_value_id = self.create_text(
-                (2 * node_pos.x + 0.5) * self.node_size + self.pad,
-                (2 * node_pos.y + 0.5) * self.node_size + self.pad - 20,
+                int((2 * node_pos.x + 0.5) * self.node_size + self.pad),
+                int((2 * node_pos.y + 0.5) * self.node_size + self.pad - self.node_size / 3.8),
                 justify=tk.RIGHT,
                 text='({})'.format(node.value),
                 font=('Arial', 10),
@@ -278,19 +283,6 @@ class GraphCanvas(tk.Canvas):
         self.updateStartGoalNodes(new_start=self.graph.start, new_goal=self.graph.goal)
         self.update()
 
-    # def updateNodes(self, node_positions: List[Pos], **options):
-    #     for option, value in options:
-    #         if option == 'start':
-    #             self._updateNodes(new_node=node_positions, old_node=self.graph.start)
-    #             self.graph.setStartNode(node_positions[0])
-    #         elif option == 'goal':
-    #             self._updateNodes(new_node=node_positions, old_node=self.graph.goal)
-    #             self.graph.setGoalNode(node_positions[0])
-    #             self.updateNodeValues()
-    #         elif option == 'reset':
-    #             for node_pos in node_positions:
-    #                 self._reset(self.node_bgs[node_pos])
-
     def updateNodeValues(self):
         for node_value_id in self.node_values.values():
             tags = self.gettags(node_value_id)
@@ -311,6 +303,21 @@ class GraphCanvas(tk.Canvas):
                 activeoutline=self.node_outline_color_selected,
                 fill=self.node_color_selected
             )
+            if len(self.coords(self.start_text_id)) > 0:
+                self.coords(
+                    self.start_text_id,
+                    int((2 * new_start.x + 0.5) * self.node_size + self.pad),
+                    int((2 * new_start.y + 0.5) * self.node_size + self.pad + self.node_size / 4.2)
+                )
+            else:
+                self.start_text_id = self.create_text(
+                    int((2 * new_start.x + 0.5) * self.node_size + self.pad),
+                    int((2 * new_start.y + 0.5) * self.node_size + self.pad + self.node_size / 4.2),
+                    justify=tk.RIGHT,
+                    text='Start',
+                    font=('Arial', 14, 'bold'),
+                    tags=('Start', 'node_label')
+                )
             self.graph.setStartNode(new_start)
         if new_goal is not None:
             self._reset(self.NODE, node_pos=self.graph.goal)
@@ -321,6 +328,21 @@ class GraphCanvas(tk.Canvas):
                 activeoutline=self.node_outline_color_selected,
                 fill=self.node_color_selected
             )
+            if len(self.coords(self.goal_text_id)) > 0:
+                self.coords(
+                    self.goal_text_id,
+                    int((2 * new_goal.x + 0.5) * self.node_size + self.pad),
+                    int((2 * new_goal.y + 0.5) * self.node_size + self.pad + self.node_size / 4.2)
+                )
+            else:
+                self.goal_text_id = self.create_text(
+                    int((2 * new_goal.x + 0.5) * self.node_size + self.pad),
+                    int((2 * new_goal.y + 0.5) * self.node_size + self.pad + self.node_size / 4.2),
+                    justify=tk.RIGHT,
+                    text='Goal',
+                    font=('Arial', 14, 'bold'),
+                    tags=('Goal', 'node_label')
+                )
             self.graph.setGoalNode(new_goal)
             self.updateNodeValues()
         self.update()
