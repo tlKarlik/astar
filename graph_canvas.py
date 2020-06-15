@@ -250,12 +250,15 @@ class GraphCanvas(tk.Canvas):
 
     def setBestPath(self, best_path: Sequence[Node]):
         self._resetPath()
-        self._highlight(self.LINK, link_start=best_path[0].pos, link_end=best_path[1].pos)
-        for i in range(1, len(best_path) - 1):
-            self._highlight(self.NODE, node_pos=best_path[i].pos, outline=self.node_outline_color_selected,
-                            activeoutline=self.node_outline_color_selected, )
-            self._highlight(self.LINK, link_start=best_path[i].pos, link_end=best_path[i + 1].pos)
-        self.path = best_path
+        if len(best_path) == 0:
+            self.path = None
+        else:
+            self._highlight(self.LINK, link_start=best_path[0].pos, link_end=best_path[1].pos)
+            for i in range(1, len(best_path) - 1):
+                self._highlight(self.NODE, node_pos=best_path[i].pos, outline=self.node_outline_color_selected,
+                                activeoutline=self.node_outline_color_selected, )
+                self._highlight(self.LINK, link_start=best_path[i].pos, link_end=best_path[i + 1].pos)
+            self.path = best_path
         self.update()
 
     def _resetPath(self):

@@ -53,11 +53,18 @@ def aStar(work_graph: Graph) -> Dict:
         work_graph.nodes[work_graph.goal],
         data_dict['best_path']
     ))
-    data_dict['output_data'].append("The fastest path from {} to {} is through the {}".format(
-        work_graph.nodes[work_graph.start],
-        work_graph.nodes[work_graph.goal],
-        data_dict['best_path']
-    ))
+
+    if len(data_dict['best_path']) == 0:
+        data_dict['output_data'].append("There was no path found from {} to {}".format(
+            work_graph.nodes[work_graph.start],
+            work_graph.nodes[work_graph.goal]
+        ))
+    else:
+        data_dict['output_data'].append("The fastest path from {} to {} is through the {}".format(
+            work_graph.nodes[work_graph.start],
+            work_graph.nodes[work_graph.goal],
+            data_dict['best_path']
+        ))
     # Return the generated data
     return data_dict
 
@@ -183,18 +190,6 @@ def sameNodeCompare(best_length: Int_or_Float, new_path: Path, path_id: int, act
         best_length = path_length
     return best_length
 
-
-'''
-def getPathsWeights(path: Path, active_paths: Dict[Path, Path]) -> Int_or_Float:
-    """
-    :type path: Path
-    :type active_paths: dict
-    :rtype: int or float
-    """
-    if not active_paths[path].enabled:
-        return float('inf')
-    return active_paths[path].weight
-'''
 
 if __name__ == '__main__':
     # work_graph = graph.testMap()

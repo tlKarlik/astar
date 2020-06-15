@@ -21,9 +21,12 @@ class Path(list):
         path = ''
         for node in self[1:-1]:
             path += '{}, '.format(node.name)
-        return '<Path from {} over {}to {} ({}){}>'.format(
-            self[0].name, path, self[-1].name, self.weight, sw[self.enabled]
-        )
+        try:
+            return '<Path from {} over {}to {} ({}){}>'.format(
+                self[0].name, path, self[-1].name, self.weight, sw[self.enabled]
+            )
+        except IndexError:
+            return '<Empty Path>'
 
     def __repr__(self) -> str:
         sw = {True: '', False: '(disabled) '}
