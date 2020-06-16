@@ -1,5 +1,6 @@
 import logging as log
 import tkinter as tk
+import sys
 from tkinter import messagebox
 from tkinter import ttk
 from typing import Dict
@@ -51,7 +52,10 @@ class MainApp(ttk.Frame):
             int((self.master.winfo_screenheight() - self.geom_size[1]) / 3)
         )
         self.geom = '{}x{}+{}+{}'.format(*self.geom_size, *self.geom_pos)
-        self.master.state('zoomed')
+        if sys.platform.startswith('win32'):
+            self.master.state('zoomed')
+        else:
+            self.master.attributes('-zoomed', True)
         master.geometry(self.geom)
 
         self.main_frame = ttk.Frame(self, width=4 / 5 * self.master.winfo_width() - 2 * self.pad,
