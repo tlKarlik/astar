@@ -1,4 +1,5 @@
 import tkinter as tk
+import os
 from typing import Dict, List, Sequence
 
 from graph import Pos, Graph, Node
@@ -18,9 +19,11 @@ class GraphCanvas(tk.Canvas):
     node_bgs: Dict[Pos, int] = {}
     node_labels: Dict[Pos, int] = {}
     node_values: Dict[Pos, int] = {}
+    start_index_id: int
+    goal_text_id: int
 
     node_color_default = '#A0A0A0'
-    node_color_selected = '#DDDDDD'
+    node_color_selected = '#DDCCCC'
     node_outline_color_default = '#FFFFFF'
     node_outline_color_selected = '#AA1010'
     outline_width_default = 2
@@ -41,7 +44,17 @@ class GraphCanvas(tk.Canvas):
         self.width = None
         self.height = None
         self.path = None
+        try:
+            self.node_outline_color_default = kwargs['background']
+        except AttributeError:
+            self.node_outline_color_default = '#FFFFFF'
+        self.start_text_id = 0
+        self.goal_text_id = 0
         self.setGraph(graph)
+        if os.name == 'nt':
+            self.bind('<MouseWheel>', lambda event: self._onMouseWheel(event, 120))
+        else:
+            self.bind('<MouseWheel>', lambda event: self._onMouseWheel(event, 1))
 
     def _onResize(self, event):
         min_width = (2 * self.graph.x_size - 1) * self.node_min_size
@@ -61,6 +74,7 @@ class GraphCanvas(tk.Canvas):
         self.width, self.height = new_width, new_height
         self.config(width=self.width, height=self.height)
         self.scale("all", 0, 0, scale, scale)
+        self.node_size *= scale
         self.update()
 
     def _reset(self, target_type: str, **options):
@@ -109,8 +123,6 @@ class GraphCanvas(tk.Canvas):
         }
         if target_type == self.NODE:
             node_options = {
-                # 'outline': self.node_outline_color_selected,
-                # 'fill': self.node_color_selected,
                 'width': self.outline_width_highlighted,
                 'activeoutline': self.node_color_selected
             }
@@ -149,7 +161,6 @@ class GraphCanvas(tk.Canvas):
         self.link_lines.clear()
         for start_node_pos, links in self.graph.links_without_duplicates.items():
             for end_node_pos, weight in links.items():
-                # print(start_node_pos, end_node_pos, weight)
                 link_line_id = self.create_line(
                     (2 * start_node_pos.x + 0.5) * self.node_size + self.pad,
                     (2 * start_node_pos.y + 0.5) * self.node_size + self.pad,
@@ -224,16 +235,16 @@ class GraphCanvas(tk.Canvas):
                 tags=(repr(node.pos).replace(' ', ''), 'node_ellipse')
             )
             node_label_id = self.create_text(
-                (2 * node_pos.x + 0.5) * self.node_size + self.pad,
-                (2 * node_pos.y + 0.5) * self.node_size + self.pad + 3,
+                int((2 * node_pos.x + 0.5) * self.node_size + self.pad),
+                int((2 * node_pos.y + 0.5) * self.node_size + self.pad),
                 justify=tk.RIGHT,
                 text=node.name,
                 font=('Arial', 18),
                 tags=(node.name, 'node_label')
             )
             node_value_id = self.create_text(
-                (2 * node_pos.x + 0.5) * self.node_size + self.pad,
-                (2 * node_pos.y + 0.5) * self.node_size + self.pad - 20,
+                int((2 * node_pos.x + 0.5) * self.node_size + self.pad),
+                int((2 * node_pos.y + 0.5) * self.node_size + self.pad - self.node_size / 3.8),
                 justify=tk.RIGHT,
                 text='({})'.format(node.value),
                 font=('Arial', 10),
@@ -245,12 +256,15 @@ class GraphCanvas(tk.Canvas):
 
     def setBestPath(self, best_path: Sequence[Node]):
         self._resetPath()
-        self._highlight(self.LINK, link_start=best_path[0].pos, link_end=best_path[1].pos)
-        for i in range(1, len(best_path) - 1):
-            self._highlight(self.NODE, node_pos=best_path[i].pos, outline=self.node_outline_color_selected,
-                            activeoutline=self.node_outline_color_selected, )
-            self._highlight(self.LINK, link_start=best_path[i].pos, link_end=best_path[i + 1].pos)
-        self.path = best_path
+        if len(best_path) == 0:
+            self.path = None
+        else:
+            self._highlight(self.LINK, link_start=best_path[0].pos, link_end=best_path[1].pos)
+            for i in range(1, len(best_path) - 1):
+                self._highlight(self.NODE, node_pos=best_path[i].pos, outline=self.node_outline_color_selected,
+                                activeoutline=self.node_outline_color_selected, )
+                self._highlight(self.LINK, link_start=best_path[i].pos, link_end=best_path[i + 1].pos)
+            self.path = best_path
         self.update()
 
     def _resetPath(self):
@@ -276,20 +290,13 @@ class GraphCanvas(tk.Canvas):
         self.placeLinks()
         self.placeNodes()
         self.updateStartGoalNodes(new_start=self.graph.start, new_goal=self.graph.goal)
+        self.setScrollableArea()
         self.update()
 
-    # def updateNodes(self, node_positions: List[Pos], **options):
-    #     for option, value in options:
-    #         if option == 'start':
-    #             self._updateNodes(new_node=node_positions, old_node=self.graph.start)
-    #             self.graph.setStartNode(node_positions[0])
-    #         elif option == 'goal':
-    #             self._updateNodes(new_node=node_positions, old_node=self.graph.goal)
-    #             self.graph.setGoalNode(node_positions[0])
-    #             self.updateNodeValues()
-    #         elif option == 'reset':
-    #             for node_pos in node_positions:
-    #                 self._reset(self.node_bgs[node_pos])
+    def setScrollableArea(self):
+        min_xsize = (2 * self.graph.x_size - 1) * self.node_min_size + 4 * self.pad
+        min_ysize = (2 * self.graph.y_size - 1) * self.node_min_size + 4 * self.pad
+        self.config(scrollregion=[0, 0, min_xsize, min_ysize])
 
     def updateNodeValues(self):
         for node_value_id in self.node_values.values():
@@ -311,6 +318,21 @@ class GraphCanvas(tk.Canvas):
                 activeoutline=self.node_outline_color_selected,
                 fill=self.node_color_selected
             )
+            if len(self.coords(self.start_text_id)) > 0:
+                self.coords(
+                    self.start_text_id,
+                    int((2 * new_start.x + 0.5) * self.node_size + self.pad),
+                    int((2 * new_start.y + 0.5) * self.node_size + self.pad + self.node_size / 4.2)
+                )
+            else:
+                self.start_text_id = self.create_text(
+                    int((2 * new_start.x + 0.5) * self.node_size + self.pad),
+                    int((2 * new_start.y + 0.5) * self.node_size + self.pad + self.node_size / 4.2),
+                    justify=tk.RIGHT,
+                    text='Start',
+                    font=('Arial', 14, 'bold'),
+                    tags=('Start', 'node_label')
+                )
             self.graph.setStartNode(new_start)
         if new_goal is not None:
             self._reset(self.NODE, node_pos=self.graph.goal)
@@ -321,6 +343,27 @@ class GraphCanvas(tk.Canvas):
                 activeoutline=self.node_outline_color_selected,
                 fill=self.node_color_selected
             )
+            if len(self.coords(self.goal_text_id)) > 0:
+                self.coords(
+                    self.goal_text_id,
+                    int((2 * new_goal.x + 0.5) * self.node_size + self.pad),
+                    int((2 * new_goal.y + 0.5) * self.node_size + self.pad + self.node_size / 4.2)
+                )
+            else:
+                self.goal_text_id = self.create_text(
+                    int((2 * new_goal.x + 0.5) * self.node_size + self.pad),
+                    int((2 * new_goal.y + 0.5) * self.node_size + self.pad + self.node_size / 4.2),
+                    justify=tk.RIGHT,
+                    text='Goal',
+                    font=('Arial', 14, 'bold'),
+                    tags=('Goal', 'node_label')
+                )
             self.graph.setGoalNode(new_goal)
             self.updateNodeValues()
         self.update()
+
+    def _onMouseWheel(self, event, factor):
+        if event.state == 9:
+            self.xview_scroll(int(-1 * (event.delta / factor)), "units")
+        else:
+            self.yview_scroll(int(-1*(event.delta/factor)), "units")
