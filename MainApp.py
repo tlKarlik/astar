@@ -26,12 +26,17 @@ class MainApp(ttk.Frame):
     graph: Graph
     canvas: GraphCanvas
 
+    canvas_bg_color: str = '#FBFBFD'
+
     def __init__(self, master: tk.Tk):
         ttk.Frame.__init__(self, master)
         self.master = master
         self.master.title("A* Algorithm | Tomas Karlik")
         self.pack(fill=tk.BOTH, expand=tk.YES)
         self.widgets = {}
+
+        style = ttk.Style()
+        style.configure('canvas.TFrame', background='#FFFFFF')
 
         self.graph = None
         self.canvas = None
@@ -49,11 +54,13 @@ class MainApp(ttk.Frame):
         master.geometry(self.geom)
 
         self.main_frame = ttk.Frame(self, width=4/5*self.master.winfo_width()-2*self.pad,
-                                    height=self.master.winfo_height()-2*self.pad)
+                                    height=self.master.winfo_height()-2*self.pad, style='canvas.TFrame')
         self.main_frame.grid(row=0, column=0, sticky='EWNS')
-        # self.control_frame = ttk.Frame(self, width=1 / 5 * self.master.winfo_width() - 2 * self.pad,
-        #                                height=self.master.winfo_height()-2*self.pad)
-        # self.control_frame.grid(row=0, column=1, sticky='EWNS', ipadx=self.pad, ipady=self.pad)
+        canvas_yscrollbar = tk.Scrollbar(self.main_frame, orient=tk.VERTICAL)
+        canvas_yscrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas_xscrollbar = tk.Scrollbar(self.main_frame, orient=tk.HORIZONTAL)
+        canvas_xscrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.canvas_scrollbars = (canvas_xscrollbar, canvas_yscrollbar)
 
         new_style = ttk.Style()
         new_style.configure('test.TFrame', background='green', padding=self.pad)
@@ -159,10 +166,15 @@ class MainApp(ttk.Frame):
                 self.main_frame,
                 width=self.main_frame.winfo_width(),
                 height=self.main_frame.winfo_height(),
-                background='#FFFFFF',
-                highlightthickness=0
+                background=self.canvas_bg_color,
+                highlightthickness=0,
             )
-            self.canvas.pack(fill=tk.BOTH, expand=tk.YES)
+            self.canvas.pack(fill=tk.BOTH, expand=tk.YES, padx=self.pad, pady=self.pad)
+
+            self.canvas_scrollbars[0].config(command=self.canvas.xview)
+            self.canvas_scrollbars[1].config(command=self.canvas.yview)
+            self.canvas.config(xscrollcommand=self.canvas_scrollbars[0].set)
+            self.canvas.config(yscrollcommand=self.canvas_scrollbars[1].set)
 
         self.widgets['node_listbox'].configure(state='normal')
         self.widgets['node_listbox'].delete(0, tk.END)

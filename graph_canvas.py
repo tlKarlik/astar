@@ -22,7 +22,7 @@ class GraphCanvas(tk.Canvas):
     goal_text_id: int
 
     node_color_default = '#A0A0A0'
-    node_color_selected = '#DDDDDD'
+    node_color_selected = '#DDCCCC'
     node_outline_color_default = '#FFFFFF'
     node_outline_color_selected = '#AA1010'
     outline_width_default = 2
@@ -43,6 +43,10 @@ class GraphCanvas(tk.Canvas):
         self.width = None
         self.height = None
         self.path = None
+        try:
+            self.node_outline_color_default = kwargs['background']
+        except AttributeError:
+            self.node_outline_color_default = '#FFFFFF'
         self.start_text_id = 0
         self.goal_text_id = 0
         self.setGraph(graph)
@@ -114,8 +118,6 @@ class GraphCanvas(tk.Canvas):
         }
         if target_type == self.NODE:
             node_options = {
-                # 'outline': self.node_outline_color_selected,
-                # 'fill': self.node_color_selected,
                 'width': self.outline_width_highlighted,
                 'activeoutline': self.node_color_selected
             }
@@ -154,7 +156,6 @@ class GraphCanvas(tk.Canvas):
         self.link_lines.clear()
         for start_node_pos, links in self.graph.links_without_duplicates.items():
             for end_node_pos, weight in links.items():
-                # print(start_node_pos, end_node_pos, weight)
                 link_line_id = self.create_line(
                     (2 * start_node_pos.x + 0.5) * self.node_size + self.pad,
                     (2 * start_node_pos.y + 0.5) * self.node_size + self.pad,
@@ -284,7 +285,13 @@ class GraphCanvas(tk.Canvas):
         self.placeLinks()
         self.placeNodes()
         self.updateStartGoalNodes(new_start=self.graph.start, new_goal=self.graph.goal)
+        self.setScrollableArea()
         self.update()
+
+    def setScrollableArea(self):
+        min_xsize = (2 * self.graph.x_size - 1) * self.node_min_size + 4 * self.pad
+        min_ysize = (2 * self.graph.y_size - 1) * self.node_min_size + 4 * self.pad
+        self.config(scrollregion=[0, 0, min_xsize, min_ysize])
 
     def updateNodeValues(self):
         for node_value_id in self.node_values.values():
