@@ -1,19 +1,18 @@
-import tkinter as tk
-import tkinter.font as tkf
-from tkinter import ttk
-from tkinter import messagebox
 import logging as log
+import tkinter as tk
+from tkinter import messagebox
+from tkinter import ttk
 from typing import Dict
 
 # import graph
 import astar_search
-from graph import Node, Graph
+from graph import Graph
 from graph_canvas import GraphCanvas
-from path import Path
-
 
 # Logging config
 log.basicConfig(level=log.INFO)
+
+
 # log.basicConfig(level=log.INFO, filename='info.log', )
 
 
@@ -53,8 +52,8 @@ class MainApp(ttk.Frame):
         self.master.state('zoomed')
         master.geometry(self.geom)
 
-        self.main_frame = ttk.Frame(self, width=4/5*self.master.winfo_width()-2*self.pad,
-                                    height=self.master.winfo_height()-2*self.pad, style='canvas.TFrame')
+        self.main_frame = ttk.Frame(self, width=4 / 5 * self.master.winfo_width() - 2 * self.pad,
+                                    height=self.master.winfo_height() - 2 * self.pad, style='canvas.TFrame')
         self.main_frame.grid(row=0, column=0, sticky='EWNS')
         canvas_yscrollbar = tk.Scrollbar(self.main_frame, orient=tk.VERTICAL)
         canvas_yscrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -87,20 +86,23 @@ class MainApp(ttk.Frame):
         exit()
 
     def _controlsInit(self):
+        # Rows 0 & 1
         self._graphSizeControls()
-        self._startEndNodeControls()
-
+        # Rows 2
         self.gen_button = tk.Button(
             self.settings_frame,
             text='Generate New Graph',
             command=self._generateGraphCallback
         )
         self.widgets['generate_button'] = self.gen_button
-        self.gen_button.grid(row=10, column=0, columnspan=2)
-
+        self.gen_button.grid(row=2, column=0, columnspan=2, padx=self.pad, pady=self.pad, sticky='EW')
+        tk.Frame(self.settings_frame, height=1, bg='#AAAAAA').grid(row=3, column=0, columnspan=2, padx=self.pad,
+                                                                   pady=[4 * self.pad, 2 * self.pad], sticky='EW')
+        # Rows 3-6
+        self._startEndNodeControls()
+        # Rows 7+
         self.output_text = tk.Text(
             self.pathfinding_frame,
-            # width=300,
             font=('Courier', 10),
             wrap=tk.NONE,
             foreground='#BB0000',
@@ -113,13 +115,13 @@ class MainApp(ttk.Frame):
         self.output_text.pack(fill=tk.BOTH, expand=True)
 
         self.find_path_button = tk.Button(
-            self.pathfinding_frame,
+            self.settings_frame,
             text='Find Path!',
             command=self._findPathCallback
         )
         self.widgets['find_path_button'] = self.find_path_button
-        # self.find_path_button.grid(row=10, column=0)
-        self.find_path_button.pack(side=tk.BOTTOM, padx=self.pad, pady=self.pad)
+        self.find_path_button.grid(row=11, column=0, columnspan=2, padx=self.pad, pady=self.pad, sticky='EWS')
+        # self.find_path_button.pack(side=tk.BOTTOM, padx=self.pad, pady=self.pad)
 
     def _findPathCallback(self):
         try:
@@ -154,7 +156,6 @@ class MainApp(ttk.Frame):
             [(node.name, node.pos) for node in self.graph.nodes.values()],
             key=lambda x: x[0].zfill(3)
         )
-        # self.graph_labels = {}
         try:
             self.canvas.delete(tk.ALL)
             self.canvas.setGraph(self.graph)
@@ -228,15 +229,23 @@ class MainApp(ttk.Frame):
             self.settings_frame,
             text='Select start and end nodes:'
         )
-        self.start_node_label.grid(row=2, column=0, columnspan=2, padx=self.pad, pady=self.pad)
+        self.start_node_label.grid(row=4, column=0, columnspan=2, padx=self.pad, pady=self.pad)
 
+        listbox_frame = ttk.Frame(self.settings_frame)
+        listbox_frame.grid(row=5, column=0, columnspan=2, padx=self.pad, pady=self.pad, sticky='EWNS')
+
+        node_select_scrollbar = tk.Scrollbar(listbox_frame, orient=tk.VERTICAL)
+        node_select_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.widgets['node_select_scrollbar'] = node_select_scrollbar
         node_select = tk.Listbox(
-            self.settings_frame,
+            listbox_frame,
             selectmode=tk.SINGLE,
             state='disabled'
         )
         self.widgets['node_listbox'] = node_select
-        node_select.grid(row=3, column=0, columnspan=2, padx=self.pad, pady=self.pad)
+        node_select.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        node_select_scrollbar.config(command=node_select.yview)
+        node_select.config(yscrollcommand=node_select_scrollbar.set)
 
         start_node_button = tk.Button(
             self.settings_frame,
@@ -244,7 +253,7 @@ class MainApp(ttk.Frame):
             command=lambda: self._setNodeCallback('start')
         )
         self.widgets['start_node_button'] = start_node_button
-        start_node_button.grid(row=4, column=0, sticky='E', padx=self.pad, pady=self.pad)
+        start_node_button.grid(row=6, column=0, sticky='EW', padx=self.pad, pady=self.pad)
 
         goal_node_button = tk.Button(
             self.settings_frame,
@@ -252,7 +261,7 @@ class MainApp(ttk.Frame):
             command=lambda: self._setNodeCallback('goal')
         )
         self.widgets['goal_node_button'] = goal_node_button
-        goal_node_button.grid(row=4, column=1, sticky='W', padx=self.pad, pady=self.pad)
+        goal_node_button.grid(row=6, column=1, sticky='EW', padx=self.pad, pady=self.pad)
 
     def bindings(self):
         """Sets key bindings for the app."""
@@ -291,10 +300,6 @@ class MainApp(ttk.Frame):
             return 0
 
 
-
-
-
-
 def run():
     root = tk.Tk()
     app = MainApp(root)
@@ -304,4 +309,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-
