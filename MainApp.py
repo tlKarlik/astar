@@ -86,6 +86,7 @@ class MainApp(ttk.Frame):
         exit()
 
     def _controlsInit(self):
+        # Settings Tab
         # Rows 0 & 1
         self._graphSizeControls()
         # Rows 2
@@ -101,6 +102,19 @@ class MainApp(ttk.Frame):
         # Rows 3-6
         self._startEndNodeControls()
         # Rows 7+
+        self.find_path_button = tk.Button(
+            self.settings_frame,
+            text='Find Path!',
+            command=self._findPathCallback
+        )
+        self.widgets['find_path_button'] = self.find_path_button
+        self.find_path_button.grid(row=11, column=0, columnspan=2, padx=self.pad, pady=self.pad, sticky='EWS')
+
+        # Pathing Tab
+        pathing_ybar = tk.Scrollbar(self.pathfinding_frame, orient=tk.VERTICAL)
+        pathing_ybar.pack(side=tk.RIGHT, fill=tk.Y, padx=[0, self.pad], pady=self.pad)
+        pathing_xbar = tk.Scrollbar(self.pathfinding_frame, orient=tk.HORIZONTAL)
+        pathing_xbar.pack(side=tk.BOTTOM, fill=tk.X, padx=self.pad, pady=[0, self.pad])
         self.output_text = tk.Text(
             self.pathfinding_frame,
             font=('Courier', 10),
@@ -111,17 +125,11 @@ class MainApp(ttk.Frame):
             height=1
         )
         self.widgets['output_text'] = self.output_text
-        # self.output_text.grid(row=0, column=0, sticky='EWNS')
-        self.output_text.pack(fill=tk.BOTH, expand=True)
-
-        self.find_path_button = tk.Button(
-            self.settings_frame,
-            text='Find Path!',
-            command=self._findPathCallback
-        )
-        self.widgets['find_path_button'] = self.find_path_button
-        self.find_path_button.grid(row=11, column=0, columnspan=2, padx=self.pad, pady=self.pad, sticky='EWS')
-        # self.find_path_button.pack(side=tk.BOTTOM, padx=self.pad, pady=self.pad)
+        self.output_text.pack(fill=tk.BOTH, expand=True, padx=[self.pad, 0], pady=[self.pad, 0])
+        pathing_ybar.config(command=self.output_text.yview)
+        pathing_xbar.config(command=self.output_text.xview)
+        self.output_text.config(yscrollcommand=pathing_ybar.set)
+        self.output_text.config(xscrollcommand=pathing_xbar.set)
 
     def _findPathCallback(self):
         try:
