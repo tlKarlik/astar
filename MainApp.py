@@ -26,6 +26,8 @@ class MainApp(ttk.Frame):
     canvas: GraphCanvas
 
     canvas_bg_color: str = '#FBFBFD'
+    max_nodes: int = 20
+    min_nodes: int = 2
 
     def __init__(self, master: tk.Tk):
         ttk.Frame.__init__(self, master)
@@ -99,13 +101,16 @@ class MainApp(ttk.Frame):
         self.gen_button.grid(row=2, column=0, columnspan=2, padx=self.pad, pady=self.pad, sticky='EW')
         tk.Frame(self.settings_frame, height=1, bg='#AAAAAA').grid(row=3, column=0, columnspan=2, padx=self.pad,
                                                                    pady=[4 * self.pad, 2 * self.pad], sticky='EW')
-        # Rows 3-6
+        # Rows 4-7
         self._startEndNodeControls()
-        # Rows 7+
+        # Rows 8+
+        tk.Frame(self.settings_frame, height=1, bg='#AAAAAA').grid(row=8, column=0, columnspan=2, padx=self.pad,
+                                                                   pady=2 * self.pad, sticky='EW')
         self.find_path_button = tk.Button(
             self.settings_frame,
             text='Find Path!',
-            command=self._findPathCallback
+            command=self._findPathCallback,
+            state='disabled'
         )
         self.widgets['find_path_button'] = self.find_path_button
         self.find_path_button.grid(row=11, column=0, columnspan=2, padx=self.pad, pady=self.pad, sticky='EWS')
@@ -159,6 +164,8 @@ class MainApp(ttk.Frame):
         except ValueError:
             messagebox.showwarning('Warning', 'Choose correct graph size first')
             return
+        graph_width = min(self.max_nodes, max(self.min_nodes, graph_width))
+        graph_height = min(self.max_nodes, max(self.min_nodes, graph_height))
         self.graph = Graph(graph_width, graph_height)
         self.ordered_nodes = sorted(
             [(node.name, node.pos) for node in self.graph.nodes.values()],
@@ -188,6 +195,7 @@ class MainApp(ttk.Frame):
         self.widgets['node_listbox'].configure(state='normal')
         self.widgets['node_listbox'].delete(0, tk.END)
         self.widgets['node_listbox'].insert(tk.END, *[node_name for node_name, node_pos in self.ordered_nodes])
+        self.widgets['find_path_button'].config(state='normal')
 
     def _graphSizeControls(self):
         self.graph_xsize_label = tk.Label(
@@ -202,14 +210,14 @@ class MainApp(ttk.Frame):
         self.graph_ysize_label.grid(row=0, column=1, padx=self.pad, pady=self.pad)
         self.graph_xsize_control = ttk.Combobox(
             self.settings_frame,
-            values=list(range(2, 11))
+            values=list(range(self.min_nodes, self.max_nodes+1))
         )
         self.graph_xsize_control.current(0)
         self.widgets['xsize_combobox'] = self.graph_xsize_control
         self.graph_xsize_control.grid(row=1, column=0, padx=self.pad, pady=self.pad)
         self.graph_ysize_control = ttk.Combobox(
             self.settings_frame,
-            values=list(range(2, 11))
+            values=list(range(self.min_nodes, self.max_nodes+1))
         )
         self.graph_ysize_control.current(0)
         self.widgets['ysize_combobox'] = self.graph_ysize_control
