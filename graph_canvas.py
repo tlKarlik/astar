@@ -1,5 +1,5 @@
 import tkinter as tk
-import os
+import sys
 from typing import Dict, List, Sequence
 
 from graph import Pos, Graph, Node
@@ -51,8 +51,11 @@ class GraphCanvas(tk.Canvas):
         self.start_text_id = 0
         self.goal_text_id = 0
         self.setGraph(graph)
-        if os.name == 'nt':
+        if sys.platform.startswith('win32'):
             self.bind('<MouseWheel>', lambda event: self._onMouseWheel(event, 120))
+        elif sys.platform.startswith('linux'):
+            self.bind('<Button-4>', lambda event: self._onMouseWheelLinux(event, -1))
+            self.bind('<Button-5>', lambda event: self._onMouseWheelLinux(event, 1))
         else:
             self.bind('<MouseWheel>', lambda event: self._onMouseWheel(event, 1))
 
@@ -362,8 +365,15 @@ class GraphCanvas(tk.Canvas):
             self.updateNodeValues()
         self.update()
 
-    def _onMouseWheel(self, event, factor):
+    def _onMouseWheelWin(self, event, factor):
+        print(event.state, event.delta)
         if event.state == 9:
             self.xview_scroll(int(-1 * (event.delta / factor)), "units")
         else:
             self.yview_scroll(int(-1*(event.delta/factor)), "units")
+
+    def _onMouseWheelLinux(self, event, factor):
+        if event.state == 17:
+            self.xview_scroll(factor, "units")
+        else:
+            self.yview_scroll(factor, "units")
