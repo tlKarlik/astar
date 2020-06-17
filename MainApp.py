@@ -27,7 +27,7 @@ class MainApp(ttk.Frame):
     canvas: GraphCanvas
 
     canvas_bg_color: str = '#FBFBFD'
-    max_nodes: int = 20
+    max_nodes: int = 15
     min_nodes: int = 2
 
     def __init__(self, master: tk.Tk):
